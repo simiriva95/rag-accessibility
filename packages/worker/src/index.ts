@@ -1,4 +1,11 @@
-import { ANSWER_SCHEMA, parseModelAnswer, type ParsedAnswer } from '@rag/core';
+import {
+  ANSWER_SCHEMA,
+  ENTAILMENT_SCHEMA,
+  parseModelAnswer,
+  parseVerdicts,
+  type EntailmentPair,
+  type ParsedAnswer,
+} from '@rag/core';
 
 /**
  * The three things that cannot be precomputed: query embedding, reranking,
@@ -26,6 +33,8 @@ const LIMITS = {
   query: 512,
   candidates: 30,
   sources: 8,
+  pairs: 12,
+  sentence: 1000,
   chunkChars: 2400,
 } as const;
 
@@ -207,6 +216,85 @@ export async function answer(question: string, sources: Chunkish[], env: Env): P
   }
 }
 
+// ── entailment ──────────────────────────────────────────────────────────────
+
+const ENTAILMENT_PROMPT = `You are checking whether a piece of evidence supports a claim. You are not judging whether the claim is true in general — only whether this evidence establishes it.
+
+For each numbered pair, return one verdict:
+- supported: the evidence states the claim, or states something the claim follows from directly.
+- partially_supported: the evidence is about the same thing and does not contradict the claim, but does not establish it. Use this when the claim adds a detail, a number or a condition the evidence does not give.
+- not_supported: the evidence does not establish the claim, or contradicts it.
+
+Return a verdict for every pair, using its index. Do not explain.`;
+
+const pairBlock = (pairs: EntailmentPair[]) =>
+  pairs
+    .map((pair, i) => `<pair index="${i}">\n<evidence>\n${pair.evidence}\n</evidence>\n<claim>${pair.sentence}</claim>\n</pair>`)
+    .join('\n\n');
+
+/**
+ * Grades a batch of claim/evidence pairs.
+ *
+ * A pair that could not be graded comes back null rather than zero. Zero is a
+ * verdict; an outage is not, and letting one read as the other would show a
+ * rate limit as a fabrication.
+ */
+export async function entail(pairs: EntailmentPair[], env: Env): Promise<(number | null)[]> {
+  const unjudged = () => pairs.map(() => null);
+  if (!env.GEMINI_API_KEY) return unjudged();
+
+  const model = env.GEMINI_MODEL ?? 'gemini-2.5-flash';
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
+
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-goog-api-key': env.GEMINI_API_KEY },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: ENTAILMENT_PROMPT }] },
+        contents: [{ parts: [{ text: pairBlock(pairs) }] }],
+        generationConfig: {
+          responseMimeType: 'application/json',
+          responseSchema: ENTAILMENT_SCHEMA,
+          temperature: 0,
+        },
+      }),
+    });
+    if (!response.ok) return unjudged();
+
+    const body = (await response.json()) as {
+      candidates?: { content?: { parts?: { text?: string }[] } }[];
+    };
+    const raw = body.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!raw) return unjudged();
+
+    return parseVerdicts(JSON.parse(raw), pairs.length);
+  } catch {
+    return unjudged();
+  }
+}
+
+function entailmentPairs(value: unknown): EntailmentPair[] {
+  if (!Array.isArray(value)) throw new BadRequest('pairs must be an array');
+  if (value.length === 0) throw new BadRequest('pairs must not be empty');
+  if (value.length > LIMITS.pairs) throw new BadRequest(`pairs must hold at most ${LIMITS.pairs} items`);
+
+  return value.map((item, i) => {
+    if (typeof item !== 'object' || item === null) throw new BadRequest(`pairs[${i}] must be an object`);
+    const { sentence, evidence } = item as Record<string, unknown>;
+    if (typeof sentence !== 'string' || sentence.trim() === '') {
+      throw new BadRequest(`pairs[${i}].sentence must be a non-empty string`);
+    }
+    if (typeof evidence !== 'string' || evidence.trim() === '') {
+      throw new BadRequest(`pairs[${i}].evidence must be a non-empty string`);
+    }
+    return {
+      sentence: sentence.slice(0, LIMITS.sentence),
+      evidence: evidence.slice(0, LIMITS.chunkChars),
+    };
+  });
+}
+
 // ── routing ─────────────────────────────────────────────────────────────────
 
 /**
@@ -227,7 +315,7 @@ export async function handle(request: Request, env: Env): Promise<Response> {
   if (request.method !== 'POST') return fail(405, 'use POST');
 
   const { pathname } = new URL(request.url);
-  if (!['/embed', '/rerank', '/answer'].includes(pathname)) return fail(404, 'no such endpoint');
+  if (!['/embed', '/rerank', '/answer', '/entail'].includes(pathname)) return fail(404, 'no such endpoint');
 
   if (!(await allowed(request, env))) return fail(429, 'rate limit exceeded, try again shortly');
 
@@ -250,6 +338,10 @@ export async function handle(request: Request, env: Env): Promise<Response> {
         const candidates = chunks(input['candidates'], 'candidates', LIMITS.candidates);
         const topK = Math.min(Number(input['topK']) || RERANK_OUT, RERANK_OUT);
         return json(await rerank(query, candidates, env, topK));
+      }
+      case '/entail': {
+        const pairs = entailmentPairs(input['pairs']);
+        return json({ scores: await entail(pairs, env) });
       }
       default: {
         const question = text(input['question'], 'question', LIMITS.query);

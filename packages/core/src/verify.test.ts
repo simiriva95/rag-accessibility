@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type { Chunk } from './types.ts';
 import {
   locateQuote,
@@ -35,7 +35,7 @@ const chunk = (over: Partial<Chunk> = {}): Chunk => ({
 
 const chunks = (...list: Chunk[]) => new Map(list.map((c) => [c.id, c]));
 
-const judgeReturning = (score: number): EntailmentJudge => async () => score;
+const judgeReturning = (score: number | null): EntailmentJudge => async (pairs) => pairs.map(() => score);
 const neverCalled: EntailmentJudge = async () => {
   throw new Error('the judge should not have been asked');
 };
@@ -46,7 +46,7 @@ const claimOf = (sentence: string, status: VerifiedClaim['status']): VerifiedCla
   quote: 'a quote',
   quoteMatch: status !== 'unsupported',
   supportingChunkIds: status === 'unsupported' ? [] : ['c1'],
-  entailment: status === 'verified' ? 0.9 : status === 'partial' ? 0.5 : 0,
+  entailment: status === 'verified' ? 0.9 : status === 'partial' ? 0.5 : status === 'unverified' ? null : 0,
   status,
 });
 
@@ -156,6 +156,12 @@ describe('statusOf', () => {
 
   it('reports the only claim it has', () => {
     expect(statusOf('One.', [claimOf('One.', 'partial')])).toBe('partial');
+    expect(statusOf('One.', [claimOf('One.', 'unverified')])).toBe('unverified');
+  });
+
+  it('ranks any verdict above an unjudged quote, except outright rejection', () => {
+    expect(statusOf('One.', [claimOf('One.', 'unverified'), claimOf('One.', 'partial')])).toBe('partial');
+    expect(statusOf('One.', [claimOf('One.', 'unverified'), claimOf('One.', 'unsupported')])).toBe('unverified');
   });
 });
 
@@ -234,6 +240,50 @@ describe('verifyClaim', () => {
     expect(result.supportingChunkIds).toEqual(['c1']);
     // Three citations were made and one held: that is what precision measures.
     expect(result.chunkIds).toHaveLength(3);
+  });
+
+  it('marks a quote-matched claim unverified when no judge was available', async () => {
+    const result = await verifyClaim(claim(), chunks(chunk()), judgeReturning(null));
+    // Not 'partial': an outage must not read as a verdict.
+    expect(result.status).toBe('unverified');
+    expect(result.quoteMatch).toBe(true);
+    expect(result.entailment).toBeNull();
+    expect(result.span).toBeDefined();
+  });
+
+  it('judges the whole batch in one call', async () => {
+    const calls: number[] = [];
+    const judge: EntailmentJudge = async (pairs) => {
+      calls.push(pairs.length);
+      return pairs.map(() => 0.9);
+    };
+
+    await verifyClaims([claim(), claim({ sentence: 'Another.' })], chunks(chunk()), judge);
+    expect(calls).toEqual([2]);
+  });
+
+  it('leaves quote failures out of the batch sent to the judge', async () => {
+    const judge = vi.fn(async (pairs: readonly { sentence: string }[]) => pairs.map(() => 0.9));
+    const results = await verifyClaims(
+      [claim({ quote: 'invented' }), claim({ sentence: 'Real.' })],
+      chunks(chunk()),
+      judge,
+    );
+
+    expect(judge.mock.calls[0]![0]).toHaveLength(1);
+    expect(results[0]!.status).toBe('unsupported');
+    expect(results[1]!.status).toBe('verified');
+  });
+
+  it('does not call the judge at all when nothing survived the quote check', async () => {
+    const results = await verifyClaims([claim({ quote: 'invented' })], chunks(chunk()), neverCalled);
+    expect(results[0]!.status).toBe('unsupported');
+  });
+
+  it('marks a claim unverified when the judge returns a short batch', async () => {
+    const short: EntailmentJudge = async () => [];
+    const results = await verifyClaims([claim()], chunks(chunk()), short);
+    expect(results[0]!.status).toBe('unverified');
   });
 
   it('keeps unsupported claims in the output rather than dropping them', async () => {

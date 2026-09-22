@@ -34,7 +34,7 @@ describe('citationMetrics', () => {
     expect(m.uncitedRate).toBe(0.5);
     expect(m.unsupportedRate).toBe(0);
     expect(m.coverage).toBe(0.5);
-    expect(m.sentences).toEqual({ verified: 1, partial: 0, unsupported: 0, uncited: 1 });
+    expect(m.sentences).toEqual({ verified: 1, partial: 0, unsupported: 0, unverified: 0, uncited: 1 });
   });
 
   it('does not let a perfectly cited sentence hide six uncited ones', () => {
@@ -83,7 +83,7 @@ describe('citationMetrics', () => {
       sentences: ['One.'],
       claims: [claim({ sentence: 'One.', entailment: 0.5, status: 'partial' })],
     });
-    expect(m.sentences).toEqual({ verified: 0, partial: 1, unsupported: 0, uncited: 0 });
+    expect(m.sentences).toEqual({ verified: 0, partial: 1, unsupported: 0, unverified: 0, uncited: 0 });
     expect(m.coverage).toBe(1);
     expect(m.unsupportedRate).toBe(0);
   });
@@ -113,7 +113,7 @@ describe('aggregateCitationMetrics', () => {
     const answer: Answer = { sentences: ['One.', 'Two.'], claims: [claim({ sentence: 'One.' })] };
     const m = aggregateCitationMetrics([answer, answer]);
     expect(m.totals).toEqual({ sentences: 4, claims: 2, citations: 2 });
-    expect(m.sentences).toEqual({ verified: 2, partial: 0, unsupported: 0, uncited: 2 });
+    expect(m.sentences).toEqual({ verified: 2, partial: 0, unsupported: 0, unverified: 0, uncited: 2 });
     expect(m.coverage).toBe(0.5);
   });
 

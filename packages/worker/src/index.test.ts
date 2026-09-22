@@ -5,6 +5,7 @@ import {
   RERANKER_MODEL,
   answer,
   embed,
+  entail,
   handle,
   rerank,
   type Ai,
@@ -182,6 +183,73 @@ describe('answer', () => {
   });
 });
 
+describe('entail', () => {
+  const verdicts = (body: unknown, ok = true) =>
+    vi.fn(async () => new Response(JSON.stringify(body), { status: ok ? 200 : 429 }));
+
+  const pairs = [
+    { sentence: 'Focus must stay visible.', evidence: 'The component is not entirely hidden.' },
+    { sentence: 'Contrast must be 4.5:1.', evidence: 'Unrelated text about page titles.' },
+  ];
+
+  it('maps the three labels onto scores, positionally', async () => {
+    vi.stubGlobal(
+      'fetch',
+      verdicts({
+        candidates: [
+          {
+            content: {
+              parts: [
+                {
+                  text: JSON.stringify({
+                    verdicts: [
+                      { index: 1, label: 'not_supported' },
+                      { index: 0, label: 'supported' },
+                    ],
+                  }),
+                },
+              ],
+            },
+          },
+        ],
+      }),
+    );
+
+    expect(await entail(pairs, { GEMINI_API_KEY: 'k' })).toEqual([1, 0]);
+    vi.unstubAllGlobals();
+  });
+
+  it('returns nulls, not zeroes, when it cannot judge', async () => {
+    // A rate limit is not a verdict of "unsupported".
+    expect(await entail(pairs, {})).toEqual([null, null]);
+
+    vi.stubGlobal('fetch', verdicts({}, false));
+    expect(await entail(pairs, { GEMINI_API_KEY: 'k' })).toEqual([null, null]);
+    vi.unstubAllGlobals();
+
+    vi.stubGlobal('fetch', verdicts({ candidates: [{ content: { parts: [{ text: 'nonsense' }] } }] }));
+    expect(await entail(pairs, { GEMINI_API_KEY: 'k' })).toEqual([null, null]);
+    vi.unstubAllGlobals();
+  });
+
+  it('numbers the pairs in the prompt so verdicts can be matched back', async () => {
+    const fetchMock = verdicts({
+      candidates: [{ content: { parts: [{ text: JSON.stringify({ verdicts: [] }) }] } }],
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    await entail(pairs, { GEMINI_API_KEY: 'k' });
+    const [, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    const sent = JSON.parse(init.body as string);
+    const prompt = sent.contents[0].parts[0].text as string;
+
+    expect(prompt).toContain('<pair index="0">');
+    expect(prompt).toContain('<pair index="1">');
+    expect(sent.generationConfig.responseSchema.required).toContain('verdicts');
+    vi.unstubAllGlobals();
+  });
+});
+
 describe('handle', () => {
   const ai: Env = { AI: aiReturning({ data: [vector()], response: [{ id: 0, score: 1 }] }) };
 
@@ -275,6 +343,23 @@ describe('handle', () => {
 
   it('allows the request when no limiter is configured, rather than going dark', async () => {
     expect((await handle(post('/embed', { query: 'q' }), ai)).status).toBe(200);
+  });
+
+  it('validates entailment pairs before spending quota', async () => {
+    expect((await handle(post('/entail', { pairs: [] }), {})).status).toBe(400);
+    expect((await handle(post('/entail', { pairs: [{ sentence: 'a' }] }), {})).status).toBe(400);
+    expect(
+      (await handle(post('/entail', { pairs: Array(13).fill({ sentence: 'a', evidence: 'b' }) }), {})).status,
+    ).toBe(400);
+  });
+
+  it('answers /entail with nulls rather than failing when no key is set', async () => {
+    const response = await handle(
+      post('/entail', { pairs: [{ sentence: 'a', evidence: 'b' }] }),
+      {},
+    );
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ scores: [null] });
   });
 
   it('puts CORS headers on every response, errors included', async () => {

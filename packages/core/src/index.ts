@@ -21,6 +21,7 @@ export {
   type Claim,
   type ClaimStatus,
   type EntailmentJudge,
+  type EntailmentPair,
   type Normalized,
   type SentenceStatus,
   type VerifiedClaim,
@@ -32,3 +33,11 @@ export {
   type ModelAnswer,
   type ParsedAnswer,
 } from './answer.ts';
+export {
+  ENTAILMENT_LABELS,
+  ENTAILMENT_SCHEMA,
+  createRemoteJudge,
+  parseVerdicts,
+  type EntailmentLabel,
+  type RemoteJudgeOptions,
+} from './entailment.ts';

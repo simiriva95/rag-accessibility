@@ -30,7 +30,13 @@ export type Claim = {
   quote: string;
 };
 
-export type ClaimStatus = 'verified' | 'partial' | 'unsupported';
+/**
+ * 'unverified' is the degraded state: the quote held, but the entailment check
+ * could not run. It is kept distinct from 'partial' on purpose — "the judge
+ * said the support is weak" and "no judge was available" are different things
+ * to show a reader, and collapsing them would let an outage look like a result.
+ */
+export type ClaimStatus = 'verified' | 'partial' | 'unsupported' | 'unverified';
 
 export type VerifiedClaim = Claim & {
   quoteMatch: boolean;
@@ -45,20 +51,28 @@ export type VerifiedClaim = Claim & {
   supportingChunkIds: string[];
   /** Offsets into the NORMALIZED source document, ready to highlight. */
   span?: { chunkId: string; start: number; end: number };
-  entailment: number;
+  /** null when the judge could not be reached, which is not the same as zero. */
+  entailment: number | null;
   status: ClaimStatus;
 };
 
+export type EntailmentPair = { sentence: string; evidence: string };
+
 /**
- * Judges whether the evidence supports the sentence, 0..1.
+ * Judges whether the evidence supports each sentence, 0..1, in order.
  *
- * An interface rather than a concrete check so the first implementation can be
- * an LLM judge and a cross-encoder can replace it without touching this file.
+ * Takes a batch rather than one pair. The free generation tier is metered per
+ * minute, so a six-sentence answer judged one claim at a time spends six of the
+ * fifteen requests available for that minute on a single question. A
+ * cross-encoder batches just as naturally, so the shape suits the replacement
+ * as well as the first implementation.
+ *
+ * Returning null for an entry means "could not judge" — an outage, a quota
+ * refusal — and is deliberately not the same as returning 0.
  */
-export type EntailmentJudge = (input: {
-  sentence: string;
-  evidence: string;
-}) => Promise<number>;
+export type EntailmentJudge = (
+  pairs: readonly EntailmentPair[],
+) => Promise<readonly (number | null)[]>;
 
 export type VerifyOptions = {
   /** At or above this, a quote-matched claim is 'verified'. */
@@ -158,22 +172,15 @@ export function locateQuote(quote: string, chunk: Chunk): { start: number; end: 
   };
 }
 
-/**
- * Runs the three checks over one claim.
- *
- * Entailment is only asked for when the quote matched. It is the expensive
- * check, and a claim whose quote is absent is already invalid — paying a model
- * call to grade it would be spending quota to change nothing.
- */
-export async function verifyClaim(
-  claim: Claim,
-  chunks: ReadonlyMap<string, Chunk>,
-  judge: EntailmentJudge,
-  options: VerifyOptions = {},
-): Promise<VerifiedClaim> {
-  const { verifiedAt, partialAt } = { ...DEFAULTS, ...options };
+/** Phase one: which cited chunks hold the quote, and where the first one is. */
+type QuoteMatch = {
+  supportingChunkIds: string[];
+  first?: { chunkId: string; chunk: Chunk; span: { start: number; end: number } };
+};
 
-  const supporting: { chunkId: string; chunk: Chunk; span: { start: number; end: number } }[] = [];
+function matchQuote(claim: Claim, chunks: ReadonlyMap<string, Chunk>): QuoteMatch {
+  const supporting: NonNullable<QuoteMatch['first']>[] = [];
+
   for (const chunkId of claim.chunkIds) {
     // A cited chunk that does not exist cites nothing, and still counts as a
     // citation that failed.
@@ -184,23 +191,78 @@ export async function verifyClaim(
     if (span) supporting.push({ chunkId, chunk, span });
   }
 
-  const supportingChunkIds = supporting.map((s) => s.chunkId);
   const first = supporting[0];
+  return { supportingChunkIds: supporting.map((s) => s.chunkId), ...(first ? { first } : {}) };
+}
 
-  if (!first) {
-    return { ...claim, quoteMatch: false, supportingChunkIds, entailment: 0, status: 'unsupported' };
+function statusFor(score: number | null, verifiedAt: number, partialAt: number): ClaimStatus {
+  if (score === null) return 'unverified';
+  return score >= verifiedAt ? 'verified' : score >= partialAt ? 'partial' : 'unsupported';
+}
+
+/**
+ * Runs the three checks over a set of claims.
+ *
+ * Two phases, and the split is the cost model made explicit. Quote matching is
+ * local and free, so it runs for every claim. Entailment costs a model call, so
+ * it runs once, for the claims that survived — a claim whose quote is absent is
+ * already invalid, and grading it would spend quota to change nothing.
+ */
+export async function verifyClaims(
+  claims: readonly Claim[],
+  chunks: ReadonlyMap<string, Chunk>,
+  judge: EntailmentJudge,
+  options: VerifyOptions = {},
+): Promise<VerifiedClaim[]> {
+  const { verifiedAt, partialAt } = { ...DEFAULTS, ...options };
+
+  const matches = claims.map((claim) => matchQuote(claim, chunks));
+  const judged = matches
+    .map((match, index) => ({ match, index }))
+    .filter((entry): entry is { match: QuoteMatch & { first: NonNullable<QuoteMatch['first']> }; index: number } =>
+      entry.match.first !== undefined,
+    );
+
+  const scores =
+    judged.length === 0
+      ? []
+      : await judge(
+          judged.map(({ match, index }) => ({
+            sentence: claims[index]!.sentence,
+            evidence: match.first.chunk.text,
+          })),
+        );
+
+  const scoreByIndex = new Map<number, number | null>();
+  for (const [position, entry] of judged.entries()) {
+    const score = scores[position];
+    scoreByIndex.set(entry.index, score === undefined ? null : score);
   }
 
-  const entailment = await judge({ sentence: claim.sentence, evidence: first.chunk.text });
-  return {
-    ...claim,
-    quoteMatch: true,
-    supportingChunkIds,
-    span: { chunkId: first.chunkId, ...first.span },
-    entailment,
-    status: entailment >= verifiedAt ? 'verified' : entailment >= partialAt ? 'partial' : 'unsupported',
-  };
+  return claims.map((claim, index) => {
+    const { supportingChunkIds, first } = matches[index]!;
+    if (!first) {
+      return { ...claim, quoteMatch: false, supportingChunkIds, entailment: 0, status: 'unsupported' };
+    }
+    const entailment = scoreByIndex.get(index) ?? null;
+    return {
+      ...claim,
+      quoteMatch: true,
+      supportingChunkIds,
+      span: { chunkId: first.chunkId, ...first.span },
+      entailment,
+      status: statusFor(entailment, verifiedAt, partialAt),
+    };
+  });
 }
+
+/** One claim, for callers that have only one. Judged in a batch of one. */
+export const verifyClaim = async (
+  claim: Claim,
+  chunks: ReadonlyMap<string, Chunk>,
+  judge: EntailmentJudge,
+  options?: VerifyOptions,
+): Promise<VerifiedClaim> => (await verifyClaims([claim], chunks, judge, options))[0]!;
 
 /**
  * The status a sentence carries in the answer view.
@@ -213,18 +275,15 @@ export async function verifyClaim(
  */
 export type SentenceStatus = ClaimStatus | 'uncited';
 
-const RANK: Record<ClaimStatus, number> = { verified: 3, partial: 2, unsupported: 1 };
+/**
+ * Any judged outcome outranks an unjudged one, except outright rejection: a
+ * quote that held with no verdict is still better evidence than one the judge
+ * looked at and refused.
+ */
+const RANK: Record<ClaimStatus, number> = { verified: 4, partial: 3, unverified: 2, unsupported: 1 };
 
 export function statusOf(sentence: string, claims: readonly VerifiedClaim[]): SentenceStatus {
   const own = claims.filter((claim) => claim.sentence === sentence);
   if (own.length === 0) return 'uncited';
   return own.reduce((best, claim) => (RANK[claim.status] > RANK[best] ? claim.status : best), own[0]!.status);
 }
-
-export const verifyClaims = async (
-  claims: readonly Claim[],
-  chunks: ReadonlyMap<string, Chunk>,
-  judge: EntailmentJudge,
-  options?: VerifyOptions,
-): Promise<VerifiedClaim[]> =>
-  Promise.all(claims.map((claim) => verifyClaim(claim, chunks, judge, options)));

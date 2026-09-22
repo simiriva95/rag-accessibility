@@ -31,6 +31,8 @@ export type CitationMetrics = {
   quoteFailureRate: number;
   /** Sentences that make a claim and whose every claim failed. */
   unsupportedRate: number;
+  /** Sentences whose quotes held but that no judge was available to grade. */
+  unverifiedRate: number;
   /** Sentences that make no claim at all. */
   uncitedRate: number;
   /** Sentence counts by status, for the report. */
@@ -47,6 +49,7 @@ export function citationMetrics(answer: Answer): CitationMetrics {
     verified: 0,
     partial: 0,
     unsupported: 0,
+    unverified: 0,
     uncited: 0,
   };
   for (const sentence of sentences) byStatus[statusOf(sentence, claims)]++;
@@ -59,6 +62,7 @@ export function citationMetrics(answer: Answer): CitationMetrics {
     precision: ratio(supporting, citations),
     quoteFailureRate: ratio(claims.filter((claim) => !claim.quoteMatch).length, claims.length),
     unsupportedRate: ratio(byStatus.unsupported, sentences.length),
+    unverifiedRate: ratio(byStatus.unverified, sentences.length),
     uncitedRate: ratio(byStatus.uncited, sentences.length),
     sentences: byStatus,
     totals: { sentences: sentences.length, claims: claims.length, citations },
@@ -84,11 +88,13 @@ export function aggregateCitationMetrics(answers: readonly Answer[]): CitationMe
     precision: avg((m) => m.precision),
     quoteFailureRate: avg((m) => m.quoteFailureRate),
     unsupportedRate: avg((m) => m.unsupportedRate),
+    unverifiedRate: avg((m) => m.unverifiedRate),
     uncitedRate: avg((m) => m.uncitedRate),
     sentences: {
       verified: sum((m) => m.sentences.verified),
       partial: sum((m) => m.sentences.partial),
       unsupported: sum((m) => m.sentences.unsupported),
+      unverified: sum((m) => m.sentences.unverified),
       uncited: sum((m) => m.sentences.uncited),
     },
     totals: {
