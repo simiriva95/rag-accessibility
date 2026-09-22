@@ -10,6 +10,11 @@ const CORPUS = join(ROOT, 'data/corpus');
 const WCAG_URL = 'https://www.w3.org/TR/WCAG22/';
 const UNDERSTANDING = /https:\/\/www\.w3\.org\/WAI\/WCAG22\/Understanding\/[a-z0-9-]+\.html/g;
 
+const GOVUK = 'https://design-system.service.gov.uk';
+/** Section landing pages; every content page is linked from their navigation. */
+const GOVUK_SECTIONS = ['components', 'patterns', 'styles', 'accessibility', 'get-started'];
+const GOVUK_LINK = /href="(\/(?:components|patterns|styles|accessibility|get-started)\/[a-z0-9/-]*)"/g;
+
 /** Fetch with an on-disk cache, so re-runs are offline and free. */
 async function fetchCached(url: string): Promise<string> {
   const file = join(RAW, url.replace(/^https?:\/\//, '').replace(/[^a-zA-Z0-9.-]/g, '_') + '.html');
@@ -46,8 +51,25 @@ async function wcagDocs(): Promise<NormalizedDoc[]> {
   return docs;
 }
 
+async function govukDocs(): Promise<NormalizedDoc[]> {
+  const paths = new Set<string>();
+  for (const section of GOVUK_SECTIONS) {
+    const html = await fetchCached(`${GOVUK}/${section}/`);
+    for (const [, path] of html.matchAll(GOVUK_LINK)) paths.add(path!);
+  }
+
+  const docs: NormalizedDoc[] = [];
+  for (const path of [...paths].sort()) {
+    const slug = path.replace(/^\/|\/$/g, '');
+    docs.push(normalizeHtml(await fetchCached(GOVUK + path), { docId: `govuk/${slug}`, sourceUrl: GOVUK + path }));
+  }
+  return docs;
+}
+
 async function main() {
-  const docs = (await wcagDocs()).sort((a, b) => (a.docId < b.docId ? -1 : 1));
+  const docs = [...(await wcagDocs()), ...(await govukDocs())].sort((a, b) =>
+    a.docId < b.docId ? -1 : 1,
+  );
 
   for (const doc of docs) {
     const file = join(CORPUS, `${doc.docId}.txt`);
@@ -64,7 +86,15 @@ async function main() {
   await writeFile(join(CORPUS, 'manifest.json'), JSON.stringify(manifest, null, 2) + '\n');
 
   const chars = manifest.reduce((n, d) => n + d.chars, 0);
-  process.stdout.write(`${docs.length} docs, ${chars.toLocaleString('en-US')} chars -> data/corpus\n`);
+  const bySource = new Map<string, number>();
+  for (const d of manifest) {
+    const source = d.docId.split('/')[0]!;
+    bySource.set(source, (bySource.get(source) ?? 0) + 1);
+  }
+  const breakdown = [...bySource].map(([s, n]) => `${s} ${n}`).join(', ');
+  process.stdout.write(
+    `${docs.length} docs (${breakdown}), ${chars.toLocaleString('en-US')} chars -> data/corpus\n`,
+  );
 }
 
 await main();

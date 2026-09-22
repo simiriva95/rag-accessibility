@@ -1,0 +1,63 @@
+# GOV.UK footer
+
+The GOV.UK footer provides copyright, licensing and other information about your service.
+
+If you use the page template, you’ll also get the footer without having to add it, as it’s included by default. However, if you want to customise the default footer, read the page template guidance about customising components.
+
+## When to use this component
+
+Use the footer at the bottom of every page of your service.
+
+## How it works
+
+Add a copyright notice to the footer to clarify who owns the copyright. For GOV.UK services, add the coat of arms to keep things consistent with the rest of GOV.UK.
+
+Make it clear whether content is available for re-use - and if it is, under what sort of licence. Use an Open Government Licence unless you have permission from the National Archives to use a different type of licence.
+
+### Footer without links
+
+### Footer with links
+
+## Adding links
+
+You can add links to:
+
+- your service’s privacy notice
+
+- your service’s accessibility statement
+
+- your service’s Cookies page
+
+- terms and conditions
+
+- help content
+
+Use ‘Privacy’, ‘Accessibility’, ‘Cookies’ and ‘Terms and conditions’ for the link text.
+
+If you include links to ‘help’ pages within the GOV.UK footer component, make sure to place those links consistently within the footer content.
+
+Also make sure that ‘help’ links always function in a similar way across each page. This is to comply with WCAG 2.2 success criterion 3.2.6 Consistent help.
+
+## Adding secondary navigation
+
+Only add secondary GOV.UK navigation if you’re creating a GOV.UK service, and you want users to be able to navigate away from the service to somewhere else on the GOV.UK website. For example, you probably don’t want to encourage a user to navigate away from a linear, form-type service.
+
+### Footer with secondary navigation
+
+### Footer with links and secondary navigation
+
+## Brand refresh of the GOV.UK footer component
+
+In June 2025, we updated this component to support a wider refresh of the GOV.UK brand.
+
+You should now use the refreshed GOV.UK branding. If your service has updated to GOV.UK Frontend v6.0.0 or later, you no longer need to use the govukRebrand feature flag and should remove it.
+
+With these changes, the GOV.UK header and GOV.UK footer components should now only be used by services on the GOV.UK website. Services outside of the GOV.UK proposition should stop using the header and footer components and instead create their own.
+
+## Help improve this component
+
+To help make sure that this page is useful, relevant and up to date, you can:
+
+- take part in the ‘GOV.UK footer’ discussion on GitHub and share your research
+
+- propose a change on GitHub – read more about how to propose changes in GitHub

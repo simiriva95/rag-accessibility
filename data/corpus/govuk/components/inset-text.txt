@@ -1,0 +1,31 @@
+# Inset text
+
+## When to use this component
+
+Use the inset text component to differentiate a block of text from the content that surrounds it, for example:
+
+- quotes
+
+- examples
+
+- additional information about the page
+
+## When not to use this component
+
+Some users do not notice inset text if it’s used on complex pages or near to other visually prominent elements. For this reason, avoid using inset text as a way of highlighting very important information that users need to see.
+
+If you need to draw attention to very important content, like legal information, use the Warning text component instead.
+
+## How it works
+
+Use inset text very sparingly - it’s less effective if it’s overused.
+
+There are 2 ways to use the inset text component. You can use HTML or, if you’re using Nunjucks or the GOV.UK Prototype Kit, you can use the Nunjucks macro.
+
+## Help improve this component
+
+To help make sure that this page is useful, relevant and up to date, you can:
+
+- take part in the ‘Inset text’ discussion on GitHub and share your research
+
+- propose a change on GitHub – read more about how to propose changes in GitHub

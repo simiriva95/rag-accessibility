@@ -1,0 +1,29 @@
+# Fieldset
+
+Use the fieldset component to group related form inputs.
+
+## When to use this component
+
+Use the fieldset component when you need to show a relationship between multiple form inputs. For example, you may need to group a set of text inputs into a single fieldset when asking for an address in your service.
+
+If you’re using the examples or macros for a Radios component, Checkboxes component or Date input component, the fieldset will already be included.
+
+## How it works
+
+The first element inside a fieldset must be a legend which describes the group of inputs. This could be a question, such as ‘What is your current address?’ or a statement like ‘Personal details’.
+
+If you’re asking just one question per page in your service as recommended, you can set the contents of the <legend> as the page heading, as shown in the example below. This is good practice as it means that users of screen readers will only hear the contents once.
+
+Read more about why and how to set legends as headings.
+
+On Question pages in your service containing a group of inputs, including the question as the legend helps users of screen readers to understand that the inputs are all related to that question.
+
+Include general help text in the legend if it would help the user fill in the form, and you cannot write it as hint text. However, try to keep it as short as possible.
+
+## Help improve this component
+
+To help make sure that this page is useful, relevant and up to date, you can:
+
+- take part in the ‘Fieldset’ discussion on GitHub and share your research
+
+- propose a change on GitHub – read more about how to propose changes in GitHub

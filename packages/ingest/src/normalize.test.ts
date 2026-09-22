@@ -61,3 +61,14 @@ describe('boilerplate sections', () => {
     expect(norm(html)).toBe('kept');
   });
 });
+
+describe('GOV.UK Design System pages', () => {
+  it('drops example wrappers, which repeat the macro options table per example', () => {
+    const html =
+      '<main><h2>How it works</h2><p>Position checkboxes to the left.</p>' +
+      '<div class="app-example app-example--tabs"><div class="app-example__code"><pre>&lt;div class="x"&gt;</pre>' +
+      '<table class="govuk-table app-options__table"><tr><td>describedBy</td><td>string</td></tr></table></div></div>' +
+      '<div class="app-contact-panel"><h2>Need help?</h2></div></main>';
+    expect(norm(html)).toBe('## How it works\n\nPosition checkboxes to the left.');
+  });
+});

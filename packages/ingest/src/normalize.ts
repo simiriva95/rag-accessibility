@@ -15,8 +15,14 @@ const SKIP_TAGS = new Set([
   'FORM', 'BUTTON', 'SVG', 'NOSCRIPT', 'TEMPLATE',
 ]);
 
-/** Navigation furniture that carries no corpus text. */
-const SKIP_CLASS = /(?:^|\s)(?:self-link|doclinks|screenreader|skip-link|toc|sidebar|breadcrumb)(?:\s|$)/;
+/**
+ * Furniture that carries no corpus text. Source-specific but kept in one list:
+ * `doclinks`/`self-link` are W3C, `app-example`/`app-contact-panel` are GOV.UK.
+ * GOV.UK repeats the same macro-options table inside every example on a page,
+ * so dropping the example wrapper removes both the code tabs and 9 copies of
+ * an API reference table that would otherwise outweigh the guidance prose.
+ */
+const SKIP_CLASS = /(?:^|\s)(?:self-link|doclinks|screenreader|skip-link|toc|sidebar|breadcrumb|app-example|app-contact-panel)(?:[\s_-]|$)/;
 /** Boilerplate sections: no corpus value, and the name lists poison BM25. */
 const SKIP_ID = /^(?:toc|table-of-contents|sotd|sidebar|navigation|changelog|acknowledgements|acknowledgments|references|ack_.*)$/;
 

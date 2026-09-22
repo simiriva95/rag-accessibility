@@ -1,0 +1,29 @@
+# Headings
+
+- Headings with captions
+
+GOV.UK Frontend v6.0.0 and later includes an updated the type scale to increase the size of text on small screens, improving legibility and accessibility.
+
+See an overview of the changes to the type scale.
+
+Use heading tags, such as <h1>, <h2> and so on, to tag the headings on a page. Apply a heading class, such as govuk-heading-l, to style them visually. Style headings consistently to create a clear content structure throughout your service.
+
+For Question pages in your service, or pages with long headings, follow the usual hierarchy of heading levels and styles associated with them. For example, govuk-heading-l for an <h1>, followed by govuk-heading-m for an <h2> and so on. In rare cases, you might want to alter how you use the headings hierarchy to achieve a better visual balance. An example of this is in the design system’s notification banner which uses heading levels in a different order to emphasise the most important information. If you do change the heading hierarchy in a similar way, it needs to go through accessibility testing before use.
+
+Write all headings in sentence case.
+
+If your page has lots of long form content, start with govuk-heading-xl for an <h1>, govuk-heading-l for an <h2>, and so on.
+
+## Headings with captions
+
+Sometimes you may need to make it clear that a page is part of a larger section or group. To do this, you can use a heading with a caption above it.
+
+If the caption should be considered part of the page heading, you can also nest the caption within the <h1>.
+
+## Help improve this style
+
+To help make sure that this page is useful, relevant and up to date, you can:
+
+- take part in the ‘Headings’ discussion on GitHub and share your research
+
+- propose a change on GitHub – read more about how to propose changes in GitHub

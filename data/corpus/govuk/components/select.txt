@@ -1,0 +1,67 @@
+# Select
+
+## When to use this component
+
+The select component should only be used as a last resort in public-facing services because research shows that some users find selects very difficult to use.
+
+## When not to use this component
+
+The select component allows users to choose an option from a long list. Before using the select component, try asking users questions which will allow you to present them with fewer options.
+
+Asking questions means you’re less likely to need to use the select component, and can consider using a different solution, such as a Radios component.
+
+## How it works
+
+If you use the component for settings, you can make an option pre-selected by default when users first see it.
+
+If you use the component for questions, you should not pre-select any of the options in case it influences users’ answers.
+
+There are 2 ways to use the select component. You can use HTML or, if you’re using Nunjucks or the GOV.UK Prototype Kit, you can use the Nunjucks macro.
+
+### Select with hint
+
+You can add hint text to help the user understand the options and choose one of them.
+
+Keep hint text to a single short sentence, without any full stops.
+
+Do not use links in hint text. While screen readers will read out the link text, they usually do not tell users the text is a link.
+
+### Error messages
+
+Display an error message if the user has not selected an option.
+
+Style error messages as shown in the example:
+
+### Avoid adding functionality to allow selecting multiple options
+
+The select component does not support selecting multiple options, as there’s a history of poor usability and assistive technology support for <select multiple>. If you need to ask the user to pick more than one item from a list, it’s almost always better to use another method, such as a list of checkboxes.
+
+## Research on this component
+
+User research has shown that some users struggle with selects.
+
+### Known issues and gaps
+
+Research shows that users can struggle with selects, particularly when users have:
+
+- been unable to close the select
+
+- tried to type into the select
+
+- confused focused items with selected items
+
+- tried to pinch zoom select options on smaller devices
+
+- not understood that they can scroll down to see more items, or how to
+
+For more detail watch this video with examples of users struggling with selects.
+
+This blog shows an example where a text input is used over a select for asking a user for a date.
+
+## Help improve this component
+
+To help make sure that this page is useful, relevant and up to date, you can:
+
+- take part in the ‘Select’ discussion on GitHub and share your research
+
+- propose a change on GitHub – read more about how to propose changes in GitHub

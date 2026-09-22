@@ -1,0 +1,19 @@
+# Warning text
+
+## When to use this component
+
+Use the warning text component when you need to warn users about something important, such as legal consequences of an action, or lack of action, that they might take.
+
+## How it works
+
+There are 2 ways to use the warning text component. You can use HTML or, if you are using Nunjucks or the GOV.UK Prototype Kit, you can use the Nunjucks macro.
+
+You might need to rewrite the hidden text (‘Warning’ in the example) to make it appropriate for your context.
+
+## Help improve this component
+
+To help make sure that this page is useful, relevant and up to date, you can:
+
+- take part in the ‘Warning text’ discussion on GitHub and share your research
+
+- propose a change on GitHub – read more about how to propose changes in GitHub

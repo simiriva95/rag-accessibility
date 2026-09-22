@@ -1,0 +1,21 @@
+# Typeface
+
+If your service is on the service.gov.uk subdomain you must use the GDS Transport font.
+
+## When not to use the GDS Transport font
+
+If your service is publicly available on a subdomain other than service.gov.uk, use an alternative typeface. Read our guidance on Using GOV.UK Frontend without GOV.UK branding for how to change your service’s font to a similar typeface.
+
+If you’re not sure whether you should use GDS Transport, do one of the following:
+
+- read the service manual section ‘If your service is not on GOV.UK’ section on ‘Making your service look like GOV.UK’
+
+- contact the Design System team
+
+## Help improve this style
+
+To help make sure that this page is useful, relevant and up to date, you can:
+
+- take part in the ‘Typeface’ discussion on GitHub and share your research
+
+- propose a change on GitHub – read more about how to propose changes in GitHub

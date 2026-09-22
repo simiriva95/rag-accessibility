@@ -1,0 +1,143 @@
+# Character count
+
+- History for
+
+Help users know how much text they can enter when there is a limit on the number of characters.
+
+## When to use this component
+
+Always test your service without a character count first.
+
+Only use the character count component when there is a good reason for limiting the number of characters users can enter. For example, if there is:
+
+- evidence that users are likely to enter more information than they need to
+
+- a legal or technical reason that means an entry must be no more than a certain number of characters
+
+## When not to use this component
+
+If your users keep hitting the character limit imposed by the backend of your service then try to increase the limit rather than use a character count.
+
+## How it works
+
+It tells users how many characters they have remaining as they type into a Textarea component with a character limit.
+
+Users will get updates at a pace that works best for the way they interact with the textarea. This means:
+
+- sighted users will see a count message that updates as they type
+
+- screen reader users will hear the count announcement when they stop typing.
+
+This component does not restrict the user from entering information. The user can enter more than the character limit, but are told they’ve entered too many characters. This lets them type or copy and paste their full answer, then edit it down.
+
+The count message appears below the textarea so that:
+
+- it’s clearly separate from any hint text or error message above the textarea
+
+- if it’s below the visible screen area, users will still see it again when they scroll down to send their response
+
+This component uses JavaScript. If JavaScript is not available, users will see a static message in place of the count message, telling them how many characters they can enter.
+
+There are 2 ways to use the character count component. You can use HTML or, if you’re using Nunjucks or the GOV.UK Prototype Kit, you can use the Nunjucks macro.
+
+### If you’re asking more than one question on the page
+
+If you’re asking more than one question on the page, do not set the contents of the <label> as the page heading. Read more about asking multiple questions on Question pages.
+
+### Consider if a word count is more helpful
+
+In some cases it may be more helpful to show a word count. For example, if your question requires a longer answer.
+
+Do this by setting data-maxwords in the component markup. For example, data-maxwords="150" will set a word limit of 150.
+
+### Avoid narrow limits
+
+When using a character count, try to set the limit higher than most users will need. Find out what this is by doing user research and data analysis.
+
+#### If the limit is far higher than users are likely to reach
+
+You can choose to display a character count message when the length of text within the textarea passes a certain ‘threshold’ of characters. This is useful when a character limit is needed due to the technical limitations of the service, but users are unlikely to reach that limit.
+
+To do this, set the threshold in the component markup as a percentage. For example, data-threshold="75" will show the count message only when the user has entered a length of text that’s 75% of the limit or more.
+
+Screen reader users will hear the character limit when they first interact with a textarea using the threshold option. Sighted users will not see anything until the count message is shown – though you might choose to include the character limit in the hint text.
+
+### Error messages
+
+Error messages should be styled like this:
+
+If a user tries to send their response with too many characters, you must show an error message above the field as well as the count message below it.
+
+The error message tells users what went wrong and how to fix it. The count message provides live feedback and updates as a user types.
+
+The input shows a red border only when the user tries to enter more than the character limit. If the number of characters is within the limit, the input does not show this border even when there’s been an error. We felt it might cause the user difficulty if the border disappeared once they started typing.
+
+Make sure errors follow GOV.UK guidance on writing error messages and have specific error messages for specific error states.
+
+#### If the input is empty
+
+Say ‘Enter [whatever it is]’.For example, ‘Enter a summary’.
+
+#### If the input is too long
+
+Say ‘[whatever it is] must be [number] characters or less’.For example, ‘Summary must be 400 characters or less’.
+
+## Research on this component
+
+In 2017, the Government Digital Service (GDS) developed and tested this component in a prototype of the ‘Apply for a temporary event notice’ service. During this research, the component was tested with 17 users, including those with low digital skills and users with disabilities.
+
+In 2022, the GOV.UK Design System team updated the component to make it more accessible, stopping the character count being announced twice by some screenreaders.
+
+### Known issues and gaps
+
+In Internet Explorer 11, JAWS will ignore any set threshold and announce the character count, even if the user entered less than the threshold.
+
+In Chrome version 99, JAWS will not announce the hint or character count of a pre-populated textarea. This is a known issue for the developer of JAWS.
+
+Also, this component counts some characters as multiple characters. For example, emojis and some non-Latin characters.
+
+### Services using this component
+
+The component is used in a number of services, including the following.
+
+Department for EducationPublish teacher training courses
+
+Government Digital ServiceContent publisher application
+
+### Next steps
+
+More user research is needed to find out:
+
+- how to decide between a character limit and a word limit
+
+- if highlighting characters over the limit in red would be helpful for users
+
+- how the component might work with lower as well as upper limits
+
+- if enabling a character count on text inputs would be useful
+
+If you’ve used this component, get in touch to share your user research findings.
+
+## Recent changes
+
+Date | Changed | Description
+
+May 2025 | GOV.UK Frontend v5.10.1 | Added error border colour when rendered with error message.
+
+Mar 2025 | GOV.UK Frontend v5.9.0 | Changed component id attribute to be based on name parameter by default. Added focused error state.
+
+Oct 2024 | Guidance | Added details of accessibility improvements we made in v4.1.0.
+
+Mar 2024 | GOV.UK Frontend v5.3.0 | Changed HTML structure to merge component wrapper and form group.
+
+Dec 2023 | GOV.UK Frontend v5.0.0 | Throw ElementError during instantiation for missing elements.
+
+View full change history
+
+## Help improve this component
+
+To help make sure that this page is useful, relevant and up to date, you can:
+
+- take part in the ‘Character count’ discussion on GitHub and share your research
+
+- propose a change on GitHub – read more about how to propose changes in GitHub

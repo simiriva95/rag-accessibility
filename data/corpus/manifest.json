@@ -1,5 +1,557 @@
 [
   {
+    "docId": "govuk/accessibility",
+    "docTitle": "Accessibility",
+    "sourceUrl": "https://design-system.service.gov.uk/accessibility/",
+    "chars": 994
+  },
+  {
+    "docId": "govuk/accessibility/accessibility-strategy",
+    "docTitle": "Accessibility strategy",
+    "sourceUrl": "https://design-system.service.gov.uk/accessibility/accessibility-strategy/",
+    "chars": 26877
+  },
+  {
+    "docId": "govuk/components",
+    "docTitle": "Components",
+    "sourceUrl": "https://design-system.service.gov.uk/components/",
+    "chars": 792
+  },
+  {
+    "docId": "govuk/components/accordion",
+    "docTitle": "Accordion",
+    "sourceUrl": "https://design-system.service.gov.uk/components/accordion/",
+    "chars": 8538
+  },
+  {
+    "docId": "govuk/components/back-link",
+    "docTitle": "Back link",
+    "sourceUrl": "https://design-system.service.gov.uk/components/back-link/",
+    "chars": 3987
+  },
+  {
+    "docId": "govuk/components/breadcrumbs",
+    "docTitle": "Breadcrumbs",
+    "sourceUrl": "https://design-system.service.gov.uk/components/breadcrumbs/",
+    "chars": 2817
+  },
+  {
+    "docId": "govuk/components/button",
+    "docTitle": "Button",
+    "sourceUrl": "https://design-system.service.gov.uk/components/button/",
+    "chars": 6522
+  },
+  {
+    "docId": "govuk/components/character-count",
+    "docTitle": "Character count",
+    "sourceUrl": "https://design-system.service.gov.uk/components/character-count/",
+    "chars": 6932
+  },
+  {
+    "docId": "govuk/components/checkboxes",
+    "docTitle": "Checkboxes",
+    "sourceUrl": "https://design-system.service.gov.uk/components/checkboxes/",
+    "chars": 6799
+  },
+  {
+    "docId": "govuk/components/cookie-banner",
+    "docTitle": "Cookie banner",
+    "sourceUrl": "https://design-system.service.gov.uk/components/cookie-banner/",
+    "chars": 8999
+  },
+  {
+    "docId": "govuk/components/date-input",
+    "docTitle": "Date input",
+    "sourceUrl": "https://design-system.service.gov.uk/components/date-input/",
+    "chars": 7061
+  },
+  {
+    "docId": "govuk/components/details",
+    "docTitle": "Details",
+    "sourceUrl": "https://design-system.service.gov.uk/components/details/",
+    "chars": 1894
+  },
+  {
+    "docId": "govuk/components/error-message",
+    "docTitle": "Error message",
+    "sourceUrl": "https://design-system.service.gov.uk/components/error-message/",
+    "chars": 6381
+  },
+  {
+    "docId": "govuk/components/error-summary",
+    "docTitle": "Error summary",
+    "sourceUrl": "https://design-system.service.gov.uk/components/error-summary/",
+    "chars": 2250
+  },
+  {
+    "docId": "govuk/components/exit-this-page",
+    "docTitle": "Exit this page",
+    "sourceUrl": "https://design-system.service.gov.uk/components/exit-this-page/",
+    "chars": 6364
+  },
+  {
+    "docId": "govuk/components/feedback",
+    "docTitle": "Feedback",
+    "sourceUrl": "https://design-system.service.gov.uk/components/feedback/",
+    "chars": 3091
+  },
+  {
+    "docId": "govuk/components/fieldset",
+    "docTitle": "Fieldset",
+    "sourceUrl": "https://design-system.service.gov.uk/components/fieldset/",
+    "chars": 1637
+  },
+  {
+    "docId": "govuk/components/file-upload",
+    "docTitle": "File upload",
+    "sourceUrl": "https://design-system.service.gov.uk/components/file-upload/",
+    "chars": 7565
+  },
+  {
+    "docId": "govuk/components/footer",
+    "docTitle": "GOV.UK footer",
+    "sourceUrl": "https://design-system.service.gov.uk/components/footer/",
+    "chars": 2718
+  },
+  {
+    "docId": "govuk/components/generic-header",
+    "docTitle": "Generic header",
+    "sourceUrl": "https://design-system.service.gov.uk/components/generic-header/",
+    "chars": 3044
+  },
+  {
+    "docId": "govuk/components/header",
+    "docTitle": "GOV.UK header",
+    "sourceUrl": "https://design-system.service.gov.uk/components/header/",
+    "chars": 3399
+  },
+  {
+    "docId": "govuk/components/inset-text",
+    "docTitle": "Inset text",
+    "sourceUrl": "https://design-system.service.gov.uk/components/inset-text/",
+    "chars": 1120
+  },
+  {
+    "docId": "govuk/components/language-navigation",
+    "docTitle": "Language navigation",
+    "sourceUrl": "https://design-system.service.gov.uk/components/language-navigation/",
+    "chars": 6824
+  },
+  {
+    "docId": "govuk/components/notification-banner",
+    "docTitle": "Notification banner",
+    "sourceUrl": "https://design-system.service.gov.uk/components/notification-banner/",
+    "chars": 5900
+  },
+  {
+    "docId": "govuk/components/pagination",
+    "docTitle": "Pagination",
+    "sourceUrl": "https://design-system.service.gov.uk/components/pagination/",
+    "chars": 3687
+  },
+  {
+    "docId": "govuk/components/panel",
+    "docTitle": "Panel",
+    "sourceUrl": "https://design-system.service.gov.uk/components/panel/",
+    "chars": 1881
+  },
+  {
+    "docId": "govuk/components/password-input",
+    "docTitle": "Password input",
+    "sourceUrl": "https://design-system.service.gov.uk/components/password-input/",
+    "chars": 6866
+  },
+  {
+    "docId": "govuk/components/phase-banner",
+    "docTitle": "Phase banner",
+    "sourceUrl": "https://design-system.service.gov.uk/components/phase-banner/",
+    "chars": 1752
+  },
+  {
+    "docId": "govuk/components/radios",
+    "docTitle": "Radios",
+    "sourceUrl": "https://design-system.service.gov.uk/components/radios/",
+    "chars": 6736
+  },
+  {
+    "docId": "govuk/components/select",
+    "docTitle": "Select",
+    "sourceUrl": "https://design-system.service.gov.uk/components/select/",
+    "chars": 2703
+  },
+  {
+    "docId": "govuk/components/service-navigation",
+    "docTitle": "Service navigation",
+    "sourceUrl": "https://design-system.service.gov.uk/components/service-navigation/",
+    "chars": 4302
+  },
+  {
+    "docId": "govuk/components/skip-link",
+    "docTitle": "Skip link",
+    "sourceUrl": "https://design-system.service.gov.uk/components/skip-link/",
+    "chars": 1625
+  },
+  {
+    "docId": "govuk/components/summary-list",
+    "docTitle": "Summary list",
+    "sourceUrl": "https://design-system.service.gov.uk/components/summary-list/",
+    "chars": 6993
+  },
+  {
+    "docId": "govuk/components/table",
+    "docTitle": "Table",
+    "sourceUrl": "https://design-system.service.gov.uk/components/table/",
+    "chars": 2761
+  },
+  {
+    "docId": "govuk/components/tabs",
+    "docTitle": "Tabs",
+    "sourceUrl": "https://design-system.service.gov.uk/components/tabs/",
+    "chars": 5467
+  },
+  {
+    "docId": "govuk/components/tag",
+    "docTitle": "Tag",
+    "sourceUrl": "https://design-system.service.gov.uk/components/tag/",
+    "chars": 3759
+  },
+  {
+    "docId": "govuk/components/task-list",
+    "docTitle": "Task list",
+    "sourceUrl": "https://design-system.service.gov.uk/components/task-list/",
+    "chars": 5841
+  },
+  {
+    "docId": "govuk/components/text-input",
+    "docTitle": "Text input",
+    "sourceUrl": "https://design-system.service.gov.uk/components/text-input/",
+    "chars": 13302
+  },
+  {
+    "docId": "govuk/components/textarea",
+    "docTitle": "Textarea",
+    "sourceUrl": "https://design-system.service.gov.uk/components/textarea/",
+    "chars": 3326
+  },
+  {
+    "docId": "govuk/components/warning-text",
+    "docTitle": "Warning text",
+    "sourceUrl": "https://design-system.service.gov.uk/components/warning-text/",
+    "chars": 775
+  },
+  {
+    "docId": "govuk/get-started",
+    "docTitle": "Get started",
+    "sourceUrl": "https://design-system.service.gov.uk/get-started/",
+    "chars": 1193
+  },
+  {
+    "docId": "govuk/get-started/extending-and-modifying-components",
+    "docTitle": "Extending and modifying components in production",
+    "sourceUrl": "https://design-system.service.gov.uk/get-started/extending-and-modifying-components/",
+    "chars": 6156
+  },
+  {
+    "docId": "govuk/get-started/focus-states",
+    "docTitle": "Understanding focus state styles",
+    "sourceUrl": "https://design-system.service.gov.uk/get-started/focus-states/",
+    "chars": 3016
+  },
+  {
+    "docId": "govuk/get-started/labels-legends-headings",
+    "docTitle": "Making labels and legends headings",
+    "sourceUrl": "https://design-system.service.gov.uk/get-started/labels-legends-headings/",
+    "chars": 2010
+  },
+  {
+    "docId": "govuk/get-started/new-type-scale",
+    "docTitle": "Using the updated type scale",
+    "sourceUrl": "https://design-system.service.gov.uk/get-started/new-type-scale/",
+    "chars": 1671
+  },
+  {
+    "docId": "govuk/get-started/production",
+    "docTitle": "Production",
+    "sourceUrl": "https://design-system.service.gov.uk/get-started/production/",
+    "chars": 2568
+  },
+  {
+    "docId": "govuk/get-started/prototyping",
+    "docTitle": "Prototyping",
+    "sourceUrl": "https://design-system.service.gov.uk/get-started/prototyping/",
+    "chars": 1535
+  },
+  {
+    "docId": "govuk/patterns",
+    "docTitle": "Patterns",
+    "sourceUrl": "https://design-system.service.gov.uk/patterns/",
+    "chars": 306
+  },
+  {
+    "docId": "govuk/patterns/addresses",
+    "docTitle": "Ask users for Addresses",
+    "sourceUrl": "https://design-system.service.gov.uk/patterns/addresses/",
+    "chars": 5675
+  },
+  {
+    "docId": "govuk/patterns/bank-details",
+    "docTitle": "Ask users for Bank details",
+    "sourceUrl": "https://design-system.service.gov.uk/patterns/bank-details/",
+    "chars": 5708
+  },
+  {
+    "docId": "govuk/patterns/check-a-service-is-suitable",
+    "docTitle": "Help users to Check a service is suitable",
+    "sourceUrl": "https://design-system.service.gov.uk/patterns/check-a-service-is-suitable/",
+    "chars": 2577
+  },
+  {
+    "docId": "govuk/patterns/check-answers",
+    "docTitle": "Help users to Check answers",
+    "sourceUrl": "https://design-system.service.gov.uk/patterns/check-answers/",
+    "chars": 3954
+  },
+  {
+    "docId": "govuk/patterns/complete-multiple-tasks",
+    "docTitle": "Help users to Complete multiple tasks",
+    "sourceUrl": "https://design-system.service.gov.uk/patterns/complete-multiple-tasks/",
+    "chars": 5968
+  },
+  {
+    "docId": "govuk/patterns/confirm-a-phone-number",
+    "docTitle": "Help users to Confirm a phone number",
+    "sourceUrl": "https://design-system.service.gov.uk/patterns/confirm-a-phone-number/",
+    "chars": 4663
+  },
+  {
+    "docId": "govuk/patterns/confirm-an-email-address",
+    "docTitle": "Help users to Confirm an email address",
+    "sourceUrl": "https://design-system.service.gov.uk/patterns/confirm-an-email-address/",
+    "chars": 4690
+  },
+  {
+    "docId": "govuk/patterns/confirmation-pages",
+    "docTitle": "Confirmation pages",
+    "sourceUrl": "https://design-system.service.gov.uk/patterns/confirmation-pages/",
+    "chars": 2132
+  },
+  {
+    "docId": "govuk/patterns/contact-a-department-or-service-team",
+    "docTitle": "Help users to Contact a department or service team",
+    "sourceUrl": "https://design-system.service.gov.uk/patterns/contact-a-department-or-service-team/",
+    "chars": 3238
+  },
+  {
+    "docId": "govuk/patterns/cookies-page",
+    "docTitle": "Cookies page",
+    "sourceUrl": "https://design-system.service.gov.uk/patterns/cookies-page/",
+    "chars": 5803
+  },
+  {
+    "docId": "govuk/patterns/create-a-username",
+    "docTitle": "Help users to Create a username",
+    "sourceUrl": "https://design-system.service.gov.uk/patterns/create-a-username/",
+    "chars": 1794
+  },
+  {
+    "docId": "govuk/patterns/create-accounts",
+    "docTitle": "Help users to Create accounts",
+    "sourceUrl": "https://design-system.service.gov.uk/patterns/create-accounts/",
+    "chars": 2921
+  },
+  {
+    "docId": "govuk/patterns/dates",
+    "docTitle": "Ask users for Dates",
+    "sourceUrl": "https://design-system.service.gov.uk/patterns/dates/",
+    "chars": 3151
+  },
+  {
+    "docId": "govuk/patterns/email-addresses",
+    "docTitle": "Ask users for Email addresses",
+    "sourceUrl": "https://design-system.service.gov.uk/patterns/email-addresses/",
+    "chars": 3576
+  },
+  {
+    "docId": "govuk/patterns/equality-information",
+    "docTitle": "Ask users for Equality information",
+    "sourceUrl": "https://design-system.service.gov.uk/patterns/equality-information/",
+    "chars": 8056
+  },
+  {
+    "docId": "govuk/patterns/exit-a-page-quickly",
+    "docTitle": "Help users to Exit a page quickly",
+    "sourceUrl": "https://design-system.service.gov.uk/patterns/exit-a-page-quickly/",
+    "chars": 4587
+  },
+  {
+    "docId": "govuk/patterns/interruption-pages",
+    "docTitle": "Interruption pages",
+    "sourceUrl": "https://design-system.service.gov.uk/patterns/interruption-pages/",
+    "chars": 3093
+  },
+  {
+    "docId": "govuk/patterns/names",
+    "docTitle": "Ask users for Names",
+    "sourceUrl": "https://design-system.service.gov.uk/patterns/names/",
+    "chars": 4587
+  },
+  {
+    "docId": "govuk/patterns/national-insurance-numbers",
+    "docTitle": "Ask users for National Insurance numbers",
+    "sourceUrl": "https://design-system.service.gov.uk/patterns/national-insurance-numbers/",
+    "chars": 2236
+  },
+  {
+    "docId": "govuk/patterns/navigate-a-service",
+    "docTitle": "Help users to Navigate a service",
+    "sourceUrl": "https://design-system.service.gov.uk/patterns/navigate-a-service/",
+    "chars": 8170
+  },
+  {
+    "docId": "govuk/patterns/page-not-found-pages",
+    "docTitle": "Page not found pages",
+    "sourceUrl": "https://design-system.service.gov.uk/patterns/page-not-found-pages/",
+    "chars": 1715
+  },
+  {
+    "docId": "govuk/patterns/passwords",
+    "docTitle": "Ask users for Passwords",
+    "sourceUrl": "https://design-system.service.gov.uk/patterns/passwords/",
+    "chars": 4565
+  },
+  {
+    "docId": "govuk/patterns/payment-card-details",
+    "docTitle": "Ask users for Payment card details",
+    "sourceUrl": "https://design-system.service.gov.uk/patterns/payment-card-details/",
+    "chars": 3151
+  },
+  {
+    "docId": "govuk/patterns/phone-numbers",
+    "docTitle": "Ask users for Phone numbers",
+    "sourceUrl": "https://design-system.service.gov.uk/patterns/phone-numbers/",
+    "chars": 4313
+  },
+  {
+    "docId": "govuk/patterns/problem-with-the-service-pages",
+    "docTitle": "There is a problem with the service pages",
+    "sourceUrl": "https://design-system.service.gov.uk/patterns/problem-with-the-service-pages/",
+    "chars": 3166
+  },
+  {
+    "docId": "govuk/patterns/question-pages",
+    "docTitle": "Question pages",
+    "sourceUrl": "https://design-system.service.gov.uk/patterns/question-pages/",
+    "chars": 6877
+  },
+  {
+    "docId": "govuk/patterns/service-unavailable-pages",
+    "docTitle": "Service unavailable pages",
+    "sourceUrl": "https://design-system.service.gov.uk/patterns/service-unavailable-pages/",
+    "chars": 2852
+  },
+  {
+    "docId": "govuk/patterns/start-using-a-service",
+    "docTitle": "Help users to Start using a service",
+    "sourceUrl": "https://design-system.service.gov.uk/patterns/start-using-a-service/",
+    "chars": 4862
+  },
+  {
+    "docId": "govuk/patterns/step-by-step-navigation",
+    "docTitle": "Step by step navigation",
+    "sourceUrl": "https://design-system.service.gov.uk/patterns/step-by-step-navigation/",
+    "chars": 7373
+  },
+  {
+    "docId": "govuk/patterns/validation",
+    "docTitle": "Help users to Recover from validation errors",
+    "sourceUrl": "https://design-system.service.gov.uk/patterns/validation/",
+    "chars": 5702
+  },
+  {
+    "docId": "govuk/styles",
+    "docTitle": "Styles",
+    "sourceUrl": "https://design-system.service.gov.uk/styles/",
+    "chars": 460
+  },
+  {
+    "docId": "govuk/styles/colour",
+    "docTitle": "Colour",
+    "sourceUrl": "https://design-system.service.gov.uk/styles/colour/",
+    "chars": 5573
+  },
+  {
+    "docId": "govuk/styles/font-override-classes",
+    "docTitle": "Font override classes",
+    "sourceUrl": "https://design-system.service.gov.uk/styles/font-override-classes/",
+    "chars": 3952
+  },
+  {
+    "docId": "govuk/styles/headings",
+    "docTitle": "Headings",
+    "sourceUrl": "https://design-system.service.gov.uk/styles/headings/",
+    "chars": 1817
+  },
+  {
+    "docId": "govuk/styles/images",
+    "docTitle": "Images",
+    "sourceUrl": "https://design-system.service.gov.uk/styles/images/",
+    "chars": 10884
+  },
+  {
+    "docId": "govuk/styles/layout",
+    "docTitle": "Layout",
+    "sourceUrl": "https://design-system.service.gov.uk/styles/layout/",
+    "chars": 5425
+  },
+  {
+    "docId": "govuk/styles/links",
+    "docTitle": "Links",
+    "sourceUrl": "https://design-system.service.gov.uk/styles/links/",
+    "chars": 2970
+  },
+  {
+    "docId": "govuk/styles/lists",
+    "docTitle": "Lists",
+    "sourceUrl": "https://design-system.service.gov.uk/styles/lists/",
+    "chars": 1012
+  },
+  {
+    "docId": "govuk/styles/page-template",
+    "docTitle": "Page template",
+    "sourceUrl": "https://design-system.service.gov.uk/styles/page-template/",
+    "chars": 10281
+  },
+  {
+    "docId": "govuk/styles/paragraphs",
+    "docTitle": "Paragraphs",
+    "sourceUrl": "https://design-system.service.gov.uk/styles/paragraphs/",
+    "chars": 1088
+  },
+  {
+    "docId": "govuk/styles/section-break",
+    "docTitle": "Section break",
+    "sourceUrl": "https://design-system.service.gov.uk/styles/section-break/",
+    "chars": 634
+  },
+  {
+    "docId": "govuk/styles/spacing",
+    "docTitle": "Spacing",
+    "sourceUrl": "https://design-system.service.gov.uk/styles/spacing/",
+    "chars": 3660
+  },
+  {
+    "docId": "govuk/styles/type-scale",
+    "docTitle": "Type scale",
+    "sourceUrl": "https://design-system.service.gov.uk/styles/type-scale/",
+    "chars": 2878
+  },
+  {
+    "docId": "govuk/styles/typeface",
+    "docTitle": "Typeface",
+    "sourceUrl": "https://design-system.service.gov.uk/styles/typeface/",
+    "chars": 881
+  },
+  {
     "docId": "understanding/abbreviations",
     "docTitle": "Understanding SC 3.1.4 Abbreviations (Level AAA)",
     "sourceUrl": "https://www.w3.org/WAI/WCAG22/Understanding/abbreviations.html",

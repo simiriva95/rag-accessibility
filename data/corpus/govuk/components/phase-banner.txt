@@ -1,0 +1,41 @@
+# Phase banner
+
+Use the phase banner component to show users your service is still being worked on.
+
+## When to use this component
+
+Services hosted on a service.gov.uk domain must use the phase banner until they pass a live assessment.
+
+## How it works
+
+There are 2 ways to use the phase banner component. You can use HTML or, if you are using Nunjucks or the GOV.UK Prototype Kit, you can use the Nunjucks macro.
+
+Use an alpha banner when your service is in alpha, and a beta banner if your service is in private or public beta.
+
+Show the Phase banner inside the <header> element, directly after either:
+
+- the Service navigation component
+
+- the GOV.UK header component (if your service does not use the Service navigation component)
+
+If you use Nunjucks, use the headerEnd block to place the Phase banner on your page.
+
+See ‘Add extra content at the start or end of the <header> element’ in ‘Page template: Blocks and options’.
+
+Phase banners are shown across all pages of a service, so users should understand it as a service-level message.
+
+You can choose to place the Phase banner in a more appropriate place for your service, however you’ll need to customise the component and provide your own CSS code to make it show correctly.
+
+### Collect feedback from users
+
+Use the Feedback component to ask users to give feedback about your service and provide them with a link a feedback page.
+
+Find out what feedback you need to collect at each phase in the GOV.UK Service Manual.
+
+## Help improve this component
+
+To help make sure that this page is useful, relevant and up to date, you can:
+
+- take part in the ‘Phase banner’ discussion on GitHub and share your research
+
+- propose a change on GitHub – read more about how to propose changes in GitHub

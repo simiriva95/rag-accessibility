@@ -1,0 +1,169 @@
+# File upload
+
+This guidance is for government teams that build online services. To find information and services for the public, go to GOV.UK.
+
+Help users select and upload a file.
+
+## When to use this component
+
+You should only ask users to upload something if it’s critical to the delivery of your service.
+
+We improved the component in March 2025, so you’ll need to enable the improved File upload component as a new feature.
+
+Read a blog post about design tips for helping users upload things.
+
+## How it works
+
+To upload a file, the user can either:
+
+- use the ‘Choose file’ button
+
+- drag and drop a file into the file upload input area
+
+### Let users reuse uploaded files
+
+Make sure users can easily reuse a previously uploaded file within a single journey, unless doing so would be a major security or privacy concern.
+
+For example, a user might need to upload a photo of their driving licence to prove their identity, and again to prove their address.
+
+You can make it easier for the user to reuse a file by showing it as an option for the user to select so they do not need to upload it again. Consider users on public devices before choosing to make the file available to preview or download.
+
+There are 2 ways to use the file upload component. You can use HTML or, if you’re using Nunjucks or the GOV.UK Prototype Kit, you can use the Nunjucks macro.
+
+### Error messages
+
+Error messages should be styled like this:
+
+Make sure errors follow the guidance in the Error message component and have specific error messages for specific error states.
+
+#### If no file has been selected
+
+Say ‘Select a [whatever they need to select]’.For example, ‘Select a report’.
+
+#### If the file is the wrong file type
+
+Say ‘The selected file must be a [list of file types]’.For example, ‘The selected file must be a CSV or ODS’ or ‘The selected file must be a JPG, BMP, PNG, TIF or PDF’.
+
+#### If the file is too big
+
+Say ‘The selected file must be smaller than [largest file size]’.For example, ‘The selected file must be smaller than 2MB’.
+
+#### If the file is empty
+
+Say ‘The selected file is empty’.
+
+#### If the file contains a virus
+
+Say ‘The selected file contains a virus’.
+
+#### If the file is password protected
+
+Say ‘The selected file is password protected’.
+
+#### If there was a problem and the file was not uploaded
+
+Say ‘The selected file could not be uploaded – try again’.
+
+#### If there is a limit on how many files the user can select
+
+Say ‘You can only select up to [highest number] files at the same time’.For example, ‘You can only select up to 10 files at the same time’.
+
+#### If the file is not in a template that must be used or the template has been changed
+
+Say ‘The selected file must use the template’.
+
+## Using the improved File upload component
+
+In March 2025, we introduced changes to the File upload component that service teams can opt in to as part of GOV.UK Frontend 5.9.0.
+
+The improved component is intended to:
+
+- fix accessibility issues
+
+- improve the user experience
+
+- allow text in the component to be translated
+
+We recommend service teams start using the latest component to improve the experience for users. However, it’s a visual change from the previous component and might affect existing designs and layouts.
+
+To let teams migrate at their own pace, the improvements are only enabled if you use the javascript macro option or extra markup in your HTML.
+
+This example shows you how to enable the improved File upload component:
+
+### About HTML attributes
+
+JavaScript creates the improved version of the component out of the input (<input type="file">) and then hides the input from the user. The improved version consists of a <button> with a few <span> elements inside.
+
+Some HTML attributes applied to the input might not work or work differently.
+
+These attributes must stay in the original input since they’re used by the button:
+
+- id and its value are added to the button and renamed on the input
+
+- disabled is copied and synchronised with any changes that happen on the input
+
+- aria-describedby is copied
+
+These attributes must stay in the original input since they only work in the input (and not the button):
+
+- name
+
+- accept
+
+- capture
+
+- accesskey
+
+- multiple, which also changes the behaviour of the button as text is added when multiple files are selected
+
+To add any other attributes to the improved version, you’ll have to add them either to the parent <div> or through JavaScript to the button.
+
+Screen readers will not read out the required attribute in the improved version. Although we recommend not to use that attribute.
+
+### Changes in the improved component
+
+To make it easier for users to drag and drop files, we’ve made the drop zone:
+
+- bigger
+
+- visible at all times
+
+- more visually responsive to user interactions
+
+We’ve also changed the ‘Choose file’ button to be more consistent with the secondary button in the Button component.
+
+Service teams can change the text on the button and in the ‘No file chosen’ message. We decided to make this text changeable for translation purposes and to let teams be specific about the file to upload. However, teams should aim to keep the text as short as possible for accessibility purposes. For example, screen reader users might find it difficult to use the component if the text is too long.
+
+All the text in the component can now be translated to match the language of the page content when JavaScript is running.
+
+#### Improvements for assistive technology users
+
+Users of Dragon, a speech recognition tool, cannot activate their browser’s native file inputs by using commands for interacting with web page controls. They have to rely on mouse commands or keyboard commands, which take multiple steps to activate the component.
+
+With the improved File upload component, users can say commands for interacting with web page controls to choose files.
+
+However, due to browser security features, this may not work right away or on subsequent interactions on the same page. If users cannot interact with the component, they’ll first need to perform another action, such as a mouse click.
+
+## Research on this component
+
+### Colour and ‘interaction state’ updates from the GOV.UK brand refresh
+
+In February 2026, we updated the improved File upload component.
+
+As part of colour changes to the GOV.UK brand, we improved the various ‘states’ that show as the user interacts with the component. For example, we’ve made it easier for users to see when they’ve added a file.
+
+We’ve also updated the colours to make user interaction more consistent and less distracting than before.
+
+### Known issues and gaps
+
+The earlier version of the File upload component does not show a visual target area when dragging and dropping a file. The component inherits and uses the browser’s default behaviour. More detail on the findings can be found in the GitHub issue: ‘Upload file component has no visual target area when dragging and dropping a file’.
+
+We revisited this issue in March 2025 and have published an improved File upload component to improve accessibility. Although we’re confident the new component is an improvement on the browser’s default behaviour, teams can continue to use the existing component until the next major release, when the new version will be enabled by default.
+
+## Help improve this component
+
+To help make sure that this page is useful, relevant and up to date, you can:
+
+- take part in the ‘File upload’ discussion on GitHub and share your research
+
+- propose a change on GitHub – read more about how to propose changes in GitHub
