@@ -1,0 +1,30 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "rag-accessibility",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-09-01",
+  // No nodejs_compat: the worker uses only fetch and the bindings below.
+  "observability": { "enabled": true },
+
+  // Workers AI runs the query embedding and the reranker. A binding rather
+  // than a REST call, so no API token has to live in the worker.
+  "ai": { "binding": "AI" },
+
+  // The platform's own per-IP rate limiter: no Durable Object, no KV, nothing
+  // to keep running. Reranking is what burns the free quota, so the limit is
+  // sized for a demo being clicked through, not for load.
+  //
+  // Declared at the top level rather than under "unsafe". Both work today, but
+  // "unsafe" fields are documented as liable to change without notice, and the
+  // one hard requirement here is that this still runs in two years.
+  "ratelimits": [
+    {
+      "name": "RATE_LIMITER",
+      "namespace_id": "1001",
+      "simple": { "limit": 20, "period": 60 }
+    }
+  ]
+
+  // GEMINI_API_KEY is a secret: `wrangler secret put GEMINI_API_KEY`.
+  // GEMINI_MODEL is optional and defaults to gemini-2.5-flash.
+}

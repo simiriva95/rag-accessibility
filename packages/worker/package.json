@@ -1,0 +1,16 @@
+{
+  "name": "@rag/worker",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy"
+  },
+  "dependencies": {
+    "@rag/core": "workspace:*"
+  },
+  "devDependencies": {
+    "wrangler": "^4.42.0"
+  }
+}
