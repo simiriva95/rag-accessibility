@@ -3,9 +3,9 @@
 Questa guida spiega **cosa stiamo costruendo, perché, e come funziona ogni pezzo**.
 È scritta per essere letta a distanza di mesi, quando i dettagli saranno svaniti.
 
-Stato: **settimana 1 completata** più il verificatore e le metriche di citazione della
-settimana 2. Gli embedding sono bloccati sulle credenziali Cloudflare (vedi §12).
-143 test. Nessuna UI.
+Stato: **settimana 1 completata**, più verificatore, metriche di citazione e Cloudflare
+Worker della settimana 2. Embedding, reranker e generazione sono bloccati sulle
+credenziali (vedi §12). 178 test. Nessuna UI.
 
 ---
 
@@ -80,7 +80,7 @@ mancanza.
 packages/
   core/      TypeScript puro — tipi, BM25, RRF, verifica. Zero dipendenze runtime
   ingest/    CLI Node — fetch, parsing, normalizzazione, chunking, indici statici
-  worker/    Cloudflare Worker — /embed, /rerank, /answer          (non ancora creato)
+  worker/    Cloudflare Worker — /embed, /rerank, /answer
   web/       Vite + React + Tailwind — la demo                     (non ancora creato)
   eval/      golden set, harness, generatore tabella ablation
 data/
@@ -548,7 +548,8 @@ re-indicizzazione dopo una modifica al chunker non rispende la quota su tutto il
 - [x] Verificatore a tre livelli (§14)
 - [x] Metriche di citazione (§15)
 - [x] Sonda di fabbricazione: 189 casi avversari, 0 errori (§16)
-- [ ] Reranker `bge-reranker-base` con rate limiting per IP e modalità degradata — **credenziali**
+- [x] Cloudflare Worker: `/embed`, `/rerank`, `/answer` con degradazione onesta (§17)
+- [ ] Deploy del Worker — **credenziali**
 - [ ] Giudice LLM concreto dietro `EntailmentJudge` — **credenziali**
 - [ ] Tabella di ablation completa — **credenziali**
 
@@ -670,7 +671,82 @@ controllo 1 da solo, ed è il punto — il controllo economico regge quasi tutto
 
 ---
 
-## 17. Decisioni prese, per memoria
+## 17. Il Cloudflare Worker — `packages/worker/src/index.ts`
+
+Le tre cose che non si possono precalcolare. Tutto il resto è un file statico.
+
+### Ogni endpoint sa cosa fare quando il modello non c'è
+
+È il requisito che tiene in piedi la demo quando il free tier dice no. **Nessuno dei
+tre finge di aver girato.**
+
+| Endpoint | Se il modello non risponde |
+|---|---|
+| `/embed` | **503.** Non esiste fallback: senza vettore della query la metà densa non può girare, e il client degrada da solo a BM25 |
+| `/rerank` | **200 con `degraded`.** Restituisce l'ordine ricevuto. I risultati sono *peggiori*, non diversi: la UI lo dice |
+| `/answer` | **`degraded` con la ragione.** Mai una risposta inventata, mai una vuota travestita da rifiuto |
+
+`/embed` rifiuta anche un vettore della larghezza sbagliata invece di restituirlo: un
+vettore corto in silenzio corromperebbe ogni coseno dell'indice.
+
+### Scelte
+
+- **Workers AI via binding, non REST**: nessun API token vive dentro il Worker.
+- **La chiave Gemini viaggia in un header, mai nell'URL.** C'è un test apposta: una
+  chiave in query string finisce nei log.
+- **Rate limiting col limiter nativo della piattaforma**, per IP. Niente Durable
+  Object, niente KV, niente da tenere acceso. Dichiarato come `ratelimits` di primo
+  livello e **non** sotto `unsafe`: funzionano entrambi oggi, ma i campi `unsafe` sono
+  documentati come soggetti a cambiare senza preavviso, e l'unico requisito duro qui è
+  che fra due anni giri ancora.
+- **Binding mancante = richiesta permessa.** Una demo che deve stare su per anni non
+  deve spegnersi per una svista di configurazione; i cap sugli input limitano comunque
+  quanto può costare una singola chiamata.
+- **Cap sugli input**: il rate limiting limita quante chiamate fa un chiamante, i cap
+  limitano quanto costa una chiamata. Un chunk troppo lungo viene **troncato**, non
+  rifiutato: è colpa del nostro chunker, non di chi chiama.
+
+### Il contratto della risposta — `packages/core/src/answer.ts`
+
+Sta in `core` perché Worker, UI ed eval ne condividano **una sola** definizione.
+
+```ts
+type ModelAnswer = {
+  answerable: boolean;
+  sentences: string[];
+  claims: Claim[];
+};
+```
+
+Due dettagli che contano:
+
+- **I claim puntano alle frasi per indice**, non ripetendone il testo. Chiedere a un
+  modello di scrivere la stessa frase due volte e poi accoppiarle per stringa è un modo
+  affidabile di ritrovarsi con claim che non appartengono a nessuna frase.
+- **`answerable` è esplicito.** Un rifiuto non è una risposta senza citazioni: le
+  metriche lo leggerebbero come diverse frasi non citate, punendo il modello per aver
+  correttamente declinato. Deve poterlo dire.
+
+Lo schema JSON passato al generatore sta **accanto al parser**, così non possono
+divergere: ciò che si chiede al modello e ciò che si accetta indietro sono una
+definizione sola. L'output strutturato rende la forma probabile, non certa — per questo
+il parser controlla comunque. Un claim malformato viene scartato **con la ragione**,
+non in silenzio: perdere una citazione non deve far perdere la risposta, e uno scarto
+muto nasconderebbe un modello che si comporta male.
+
+### Deploy
+
+```bash
+cd packages/worker
+npx wrangler secret put GEMINI_API_KEY   # chiave di ai.google.dev
+npx wrangler deploy
+```
+
+Bundle: 10,98 KiB, 3,77 KiB gzip.
+
+---
+
+## 18. Decisioni prese, per memoria
 
 | Decisione | Motivo |
 |---|---|
