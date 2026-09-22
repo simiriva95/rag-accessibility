@@ -25,6 +25,9 @@ importers:
       '@rag/core':
         specifier: workspace:*
         version: link:../core
+      '@rag/ingest':
+        specifier: workspace:*
+        version: link:../ingest
 
   packages/ingest:
     dependencies:

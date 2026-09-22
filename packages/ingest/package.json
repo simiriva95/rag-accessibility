@@ -10,5 +10,8 @@
   "dependencies": {
     "@rag/core": "workspace:*",
     "linkedom": "^0.18.12"
+  },
+  "exports": {
+    "./embed": "./src/embed.ts"
   }
 }

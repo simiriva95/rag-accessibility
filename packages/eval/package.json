@@ -4,9 +4,11 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "golden": "node src/resolve.ts"
+    "golden": "node src/resolve.ts",
+    "ablation": "node src/harness.ts"
   },
   "dependencies": {
-    "@rag/core": "workspace:*"
+    "@rag/core": "workspace:*",
+    "@rag/ingest": "workspace:*"
   }
 }
