@@ -12,3 +12,14 @@ export {
   type DenseVectors,
 } from './dense.ts';
 export { RRF_K, fuseRrf } from './rrf.ts';
+export {
+  locateQuote,
+  normalizeForMatch,
+  verifyClaim,
+  verifyClaims,
+  type Claim,
+  type EntailmentJudge,
+  type Normalized,
+  type VerifiedClaim,
+  type VerifyOptions,
+} from './verify.ts';
