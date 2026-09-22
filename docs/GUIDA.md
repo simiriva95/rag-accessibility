@@ -3,9 +3,9 @@
 Questa guida spiega **cosa stiamo costruendo, perché, e come funziona ogni pezzo**.
 È scritta per essere letta a distanza di mesi, quando i dettagli saranno svaniti.
 
-Stato: **settimana 1 completata**, tranne gli embedding — bloccati sulle credenziali
-Cloudflare (vedi §12). Harness di valutazione e tabella di ablation già funzionanti
-sulla metà lessicale. Nessuna UI.
+Stato: **settimana 1 completata** più il verificatore e le metriche di citazione della
+settimana 2. Gli embedding sono bloccati sulle credenziali Cloudflare (vedi §12).
+143 test. Nessuna UI.
 
 ---
 
@@ -543,11 +543,14 @@ re-indicizzazione dopo una modifica al chunker non rispende la quota su tutto il
 - [x] Metriche e harness di ablation
 - [ ] Embedding del corpus — **bloccato sulle credenziali**
 
-### Settimana 2
+### Settimana 2 — in corso
 
-Reranker `bge-reranker-base` su Workers AI con rate limiting per IP e modalità
-degradata, verificatore a tre livelli, metriche di citazione, tabella di ablation
-completa.
+- [x] Verificatore a tre livelli (§14)
+- [x] Metriche di citazione (§15)
+- [x] Sonda di fabbricazione: 189 casi avversari, 0 errori (§16)
+- [ ] Reranker `bge-reranker-base` con rate limiting per IP e modalità degradata — **credenziali**
+- [ ] Giudice LLM concreto dietro `EntailmentJudge` — **credenziali**
+- [ ] Tabella di ablation completa — **credenziali**
 
 ### Settimana 3
 
@@ -556,7 +559,7 @@ README.
 
 ---
 
-## 14. Il layer di verifica (progettato, non ancora scritto)
+## 14. Il layer di verifica — `packages/core/src/verify.ts`
 
 Il modello non produce prosa con note a piè di pagina. Produce **claim**:
 
@@ -568,31 +571,106 @@ type Claim = {
 };
 ```
 
-Tre controlli, in ordine:
+### I tre controlli, dal più economico
 
-1. **Quote match** — normalizzati whitespace e Unicode, la citazione deve essere una
-   sottostringa **letterale** di un chunk citato. Se non lo è, il claim è invalido:
-   nessun fallback fuzzy, nessuna soglia di similarità. È il controllo più economico
-   e intercetta la maggior parte delle invenzioni.
-2. **Entailment** — il claim viene passato a un giudizio NLI. Si parte con un LLM
-   come giudice, lasciando l'interfaccia aperta per un cross-encoder.
-3. **Span resolution** — la citazione trovata viene rimappata a `charStart`/`charEnd`
-   nel documento sorgente, così la UI può evidenziarla al suo posto.
+**1. Quote match.** Nessun fallback fuzzy, nessuna soglia di similarità. Una citazione
+che non è nel testo non è una citazione. Questa singola regola intercetta la maggior
+parte delle invenzioni al costo di una ricerca di sottostringa.
+
+**2. Span resolution.** La citazione trovata viene rimappata a offset nel documento
+sorgente, così la UI può evidenziarla al suo posto.
+
+**3. Entailment.** Viene chiesto **solo dopo** che una citazione ha combaciato: un
+claim con citazione assente è già invalido, e valutarlo spenderebbe quota per non
+cambiare niente. Dietro l'interfaccia `EntailmentJudge`, così un giudice LLM oggi e un
+cross-encoder domani non toccano questo file.
+
+### Cosa viene normalizzato, e cosa no
+
+Una classe di equivalenza **finita ed esplicita**: forma Unicode, run di whitespace, e
+le sostituzioni tipografiche che un modello fa da solo — virgolette curve, trattini,
+ellissi. La prosa GOV.UK è piena di apostrofi U+2019: bocciare una citazione corretta
+perché il modello ha scritto quello ASCII sarebbe un bug travestito da rigore.
+
+**Il case non si normalizza.** "Verbatim" è l'affermazione che stiamo facendo.
+
+### La normalizzazione deve essere reversibile
+
+Altrimenti la citazione si può trovare ma non evidenziare, che è tutto l'esercizio.
+Due bug, entrambi trovati dai test:
+
+1. **Normalizzando carattere per carattere, NFC non compone.** `'e'` e `U+0301`
+   normalizzano ciascuno a sé stessi, quindi il testo decomposto non eguagliava mai la
+   sua forma composta — si perdeva esattamente l'equivalenza per cui NFC esiste. Ora si
+   lavora per **cluster**: un code point più i suoi segni combinanti.
+2. **Un cluster trasforma più caratteri sorgente in uno solo**, quindi un singolo
+   offset per carattere normalizzato non basta a chiudere uno span. La mappa porta
+   `starts` e `ends`, e la fine esclusiva si legge dalla mappa invece di calcolarla
+   come `start + 1`.
+
+Uno `stato` per frase:
 
 ```ts
-type VerifiedClaim = Claim & {
-  quoteMatch: boolean;
-  span?: { chunkId: string; start: number; end: number };
-  entailment: number;                              // 0..1
-  status: 'verified' | 'partial' | 'unsupported';
-};
+type SentenceStatus = 'verified' | 'partial' | 'unsupported' | 'uncited';
 ```
+
+Una frase vale quanto il suo claim migliore. Una frase **senza** claim è `uncited`, non
+`unsupported`: potrebbe essere un connettivo, e confondere le due cose nasconderebbe
+proprio le frasi che fanno un'affermazione fattuale non sostenuta.
 
 **I claim non supportati si mostrano, non si nascondono.** Mostrarli è tutto il punto.
 
 ---
 
-## 15. Decisioni prese, per memoria
+## 15. Metriche di citazione — `packages/eval/src/citation.ts`
+
+Si calcolano sulle **frasi** della risposta, non solo sui claim. Un modello che cita
+due frasi alla perfezione e ne lascia sei senza citazione prenderebbe 100% su
+qualunque metrica basata solo sui claim, dicendo sei cose non sostenute.
+
+| Metrica | Definizione |
+|---|---|
+| `coverage` | Frasi con almeno un claim, sul totale |
+| `precision` | Di **ogni** chunk citato, la frazione che contiene davvero la citazione |
+| `quoteFailureRate` | Claim la cui citazione non compare in nessun chunk citato |
+| `unsupportedRate` | Frasi che fanno un claim e i cui claim sono tutti falliti |
+| `uncitedRate` | Frasi che non fanno alcun claim |
+
+`precision` ha richiesto una modifica al verificatore: prima si fermava al primo chunk
+citato che conteneva la citazione. Basta per risolvere lo span, non per giudicare le
+citazioni — **un claim che ne cita quattro ed è sorretto da uno ne ha fatte tre che non
+reggono**. Ora vengono controllate tutte.
+
+L'aggregazione fa la media **per risposta**, non mette in comune le frasi: altrimenti
+una risposta lunga surclasserebbe una corta.
+
+---
+
+## 16. La sonda di fabbricazione — `packages/eval/src/fabrication.test.ts`
+
+È la parte che rende l'affermazione verificabile. Il progetto sostiene che le citazioni
+sono verificate invece che dichiarate: vale qualcosa solo se il controllo non accetta
+mai una citazione sbagliata e non rifiuta mai una giusta.
+
+Quindi se ne costruiscono **189 dal corpus vero**, su tutte e tre le fonti:
+
+**65 che devono essere accettate**
+- estratto alla lettera
+- estratto col whitespace riformattato, come lo restituisce un modello
+- estratto con gli apostrofi tipografici raddrizzati
+
+**124 che devono essere rifiutate**
+- una citazione vera, attribuita al chunk sbagliato
+- un estratto con **una** parola sostituita
+- due frammenti veri del chunk **cuciti insieme** (entrambi presenti, la giunzione no)
+- una frase inventata nel registro del corpus
+
+**Zero falsi accettati, zero falsi rifiutati.** Nessun modello, nessuna quota: è il
+controllo 1 da solo, ed è il punto — il controllo economico regge quasi tutto il peso.
+
+---
+
+## 17. Decisioni prese, per memoria
 
 | Decisione | Motivo |
 |---|---|
