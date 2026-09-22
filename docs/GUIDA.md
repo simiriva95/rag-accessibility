@@ -3,9 +3,9 @@
 Questa guida spiega **cosa stiamo costruendo, perché, e come funziona ogni pezzo**.
 È scritta per essere letta a distanza di mesi, quando i dettagli saranno svaniti.
 
-Stato: **settimana 1 completata**, più verificatore, metriche di citazione e Cloudflare
-Worker della settimana 2. Embedding, reranker e generazione sono bloccati sulle
-credenziali (vedi §12). 178 test. Nessuna UI.
+Stato: **settimane 1 e 2 completate a livello di codice**. Embedding, reranker e
+generazione girano solo con le credenziali (vedi §12), ma tutto il resto — retrieval,
+verifica, metriche, Worker — è scritto e testato. 206 test. Nessuna UI.
 
 ---
 
@@ -548,9 +548,9 @@ re-indicizzazione dopo una modifica al chunker non rispende la quota su tutto il
 - [x] Verificatore a tre livelli (§14)
 - [x] Metriche di citazione (§15)
 - [x] Sonda di fabbricazione: 189 casi avversari, 0 errori (§16)
-- [x] Cloudflare Worker: `/embed`, `/rerank`, `/answer` con degradazione onesta (§17)
+- [x] Cloudflare Worker: `/embed`, `/rerank`, `/answer`, `/entail` con degradazione onesta (§17)
+- [x] Giudice LLM concreto dietro `EntailmentJudge`, a batch (§18)
 - [ ] Deploy del Worker — **credenziali**
-- [ ] Giudice LLM concreto dietro `EntailmentJudge` — **credenziali**
 - [ ] Tabella di ablation completa — **credenziali**
 
 ### Settimana 3
@@ -685,6 +685,7 @@ tre finge di aver girato.**
 | `/embed` | **503.** Non esiste fallback: senza vettore della query la metà densa non può girare, e il client degrada da solo a BM25 |
 | `/rerank` | **200 con `degraded`.** Restituisce l'ordine ricevuto. I risultati sono *peggiori*, non diversi: la UI lo dice |
 | `/answer` | **`degraded` con la ragione.** Mai una risposta inventata, mai una vuota travestita da rifiuto |
+| `/entail` | **`null` per ogni coppia**, mai `0`. Zero è un verdetto; un rate limit no |
 
 `/embed` rifiuta anche un vettore della larghezza sbagliata invece di restituirlo: un
 vettore corto in silenzio corromperebbe ogni coseno dell'indice.
@@ -746,7 +747,83 @@ Bundle: 10,98 KiB, 3,77 KiB gzip.
 
 ---
 
-## 18. Decisioni prese, per memoria
+## 18. Il giudice di entailment — `packages/core/src/entailment.ts`
+
+### Perché a batch
+
+`EntailmentJudge` prende un **array** di coppie, non una alla volta. Il free tier è
+misurato al minuto: una risposta da sei frasi giudicata un claim per volta spendeva
+**sei delle quindici richieste** disponibili in quel minuto per una sola domanda.
+
+Un cross-encoder fa batch altrettanto naturalmente, quindi la forma va bene anche per
+il sostituto, non solo per la prima implementazione.
+
+Di conseguenza `verifyClaims` è diventato **due fasi esplicite**, che è il modello di
+costo messo per iscritto:
+
+1. **Quote match** — locale e gratuito, gira per ogni claim.
+2. **Entailment** — costa una chiamata, gira **una volta sola**, per i claim
+   sopravvissuti.
+
+### Tre etichette, non un numero
+
+I modelli sono inaffidabili sui punteggi fini calibrati: se chiedi 0.73 te lo danno, e
+non significa niente. Tre etichette sono qualcosa che un modello può davvero decidere,
+e cadono ai due lati delle soglie già esistenti:
+
+| Etichetta | Punteggio | Esito |
+|---|---:|---|
+| `supported` | 1.0 | ≥ 0.7 → **verified** |
+| `partially_supported` | 0.5 | ≥ 0.4 → **partial** |
+| `not_supported` | 0.0 | < 0.4 → **unsupported** |
+
+L'interfaccia resta `0..1`, così un cross-encoder — che un punteggio continuo vero lo
+produce — non richiede nessuna modifica a valle.
+
+### `unverified`: lo stato che mancava
+
+```ts
+type ClaimStatus = 'verified' | 'partial' | 'unsupported' | 'unverified';
+```
+
+`unverified` = **la citazione regge, ma il controllo di entailment non ha potuto
+girare**. Tenuto distinto da `partial` di proposito: *"il giudice dice che il supporto
+è debole"* e *"non c'era nessun giudice"* sono due cose diverse da mostrare a chi
+legge, e confonderle farebbe sembrare un risultato quello che è un disservizio.
+
+Nell'ordinamento sta **sopra `unsupported` e sotto `partial`**: qualunque verdetto
+batte una citazione non giudicata, tranne il rifiuto esplicito.
+
+### Null, mai zero
+
+Ovunque un punteggio non si possa ottenere, la risposta è `null`. **Zero è un verdetto;
+un rate limit no**, e far leggere l'uno come l'altro mostrerebbe un disservizio come
+un'invenzione.
+
+Per lo stesso motivo il giudice remoto **non solleva mai eccezioni**: una risposta le
+cui citazioni hanno retto tutte non deve sparire perché il giudice era occupato.
+
+---
+
+## 19. Test d'integrazione — `packages/eval/src/pipeline.test.ts`
+
+Percorre l'intera catena di contratti sui chunk veri: cosa si chiede al modello, cosa
+accetta il parser, cosa ne fa il verificatore, cosa dicono le metriche.
+
+I test unitari tengono ciascuno un anello. Questo li tiene **insieme** — è il test che
+fallisce quando due di loro divergono continuando entrambi a passare sulle proprie
+fixture.
+
+Distingue in particolare tre cose che è facile confondere:
+
+- citazione **inventata** → `unsupported`, `quoteFailureRate` sale;
+- citazione **vera ma attribuita al chunk sbagliato** → `unsupported`, e `precision`
+  scende;
+- citazione **valida ma non giudicata** → `unverified`, e `unsupportedRate` resta 0.
+
+---
+
+## 20. Decisioni prese, per memoria
 
 | Decisione | Motivo |
 |---|---|
