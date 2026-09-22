@@ -4,7 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "corpus": "node src/cli.ts"
+    "corpus": "node src/cli.ts",
+    "ask": "node src/ask.ts"
   },
   "dependencies": {
     "@rag/core": "workspace:*",

@@ -1,7 +1,14 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
-import { buildBm25Index, type NormalizedDoc } from '@rag/core';
+import {
+  buildBm25Index,
+  encodeDenseVectors,
+  quantize,
+  type Chunk,
+  type NormalizedDoc,
+} from '@rag/core';
 import { chunkDocument } from './chunk.ts';
+import { EMBEDDING_DIMS, credentialsFromEnv, documentText, embedTexts } from './embed.ts';
 import { normalizeHtml } from './normalize.ts';
 
 const ROOT = resolve(import.meta.dirname, '../../..');
@@ -68,7 +75,47 @@ async function govukDocs(): Promise<NormalizedDoc[]> {
   return docs;
 }
 
+/**
+ * Embeddings are cached by chunk id across runs. The free tier is metered and
+ * a re-index after a chunker change only moves a fraction of the chunks, so
+ * re-embedding the whole corpus each time would waste most of the quota.
+ */
+async function embedChunks(chunks: Chunk[]): Promise<Float32Array[] | undefined> {
+  let credentials;
+  try {
+    credentials = credentialsFromEnv();
+  } catch (error) {
+    process.stderr.write(`\nSkipping embeddings — ${(error as Error).message}\n`);
+    return undefined;
+  }
+
+  const cacheFile = join(RAW, 'embeddings.json');
+  const cache: Record<string, number[]> = await readFile(cacheFile, 'utf8')
+    .then((json) => JSON.parse(json) as Record<string, number[]>)
+    .catch(() => ({}));
+
+  const missing = chunks.filter((c) => cache[c.id] === undefined);
+  if (missing.length > 0) {
+    process.stderr.write(`embedding ${missing.length} chunks (${chunks.length - missing.length} cached)\n`);
+    const vectors = await embedTexts(missing.map(documentText), credentials, (done, total) =>
+      process.stderr.write(`  ${done}/${total}\r`),
+    );
+    for (const [i, chunk] of missing.entries()) cache[chunk.id] = [...vectors[i]!];
+    await mkdir(RAW, { recursive: true });
+    await writeFile(cacheFile, JSON.stringify(cache));
+    process.stderr.write('\n');
+  }
+
+  return chunks.map((c) => Float32Array.from(cache[c.id]!));
+}
+
 async function main() {
+  try {
+    process.loadEnvFile(join(ROOT, '.env'));
+  } catch {
+    // No .env is fine; the variables may already be exported.
+  }
+
   const docs = [...(await wcagDocs()), ...(await govukDocs())].sort((a, b) =>
     a.docId < b.docId ? -1 : 1,
   );
@@ -91,11 +138,9 @@ async function main() {
   await mkdir(INDEX, { recursive: true });
   await writeFile(join(INDEX, 'chunks.json'), JSON.stringify(chunks) + '\n');
 
-  // The chunk's heading path is indexed with its body: a criterion's number
-  // lives in the heading, and that is exactly what identifier queries ask for.
-  const bm25 = buildBm25Index(
-    chunks.map((c) => ({ id: c.id, text: `${c.headingPath.join(' ')}\n${c.text}` })),
-  );
+  // Indexed over the same text that gets embedded: the heading path carries
+  // the criterion number, which is exactly what identifier queries ask for.
+  const bm25 = buildBm25Index(chunks.map((c) => ({ id: c.id, text: documentText(c) })));
   await writeFile(join(INDEX, 'bm25.json'), JSON.stringify(bm25));
 
   const chars = manifest.reduce((n, d) => n + d.chars, 0);
@@ -117,11 +162,21 @@ async function main() {
       `(median ${median} tokens, max ${tokens.at(-1)}, ${withScRef} carry an SC ref)\n`,
   );
 
-  const bytes = (await readFile(join(INDEX, 'bm25.json'))).byteLength;
+  const bm25Bytes = (await readFile(join(INDEX, 'bm25.json'))).byteLength;
   process.stdout.write(
     `BM25: ${Object.keys(bm25.postings).length.toLocaleString('en-US')} terms, ` +
-      `avgdl ${bm25.avgdl.toFixed(0)}, ${(bytes / 1024 / 1024).toFixed(2)} MB\n`,
+      `avgdl ${bm25.avgdl.toFixed(0)}, ${(bm25Bytes / 1024 / 1024).toFixed(2)} MB\n`,
   );
+
+  const vectors = await embedChunks(chunks);
+  if (vectors) {
+    const encoded = encodeDenseVectors(quantize(vectors, EMBEDDING_DIMS));
+    await writeFile(join(INDEX, 'vectors.bin'), Buffer.from(encoded));
+    process.stdout.write(
+      `Dense: ${vectors.length} vectors x ${EMBEDDING_DIMS} int8, ` +
+        `${(encoded.byteLength / 1024 / 1024).toFixed(2)} MB -> data/index/vectors.bin\n`,
+    );
+  }
 }
 
 await main();
