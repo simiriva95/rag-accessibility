@@ -1,0 +1,85 @@
+# Understanding SC 2.4.8 Location (Level AAA)
+
+## In Brief
+
+Goal
+
+Users know where they are in a set of pages.
+
+What to do
+
+Use breadcrumbs, site maps, or other indicators to give context.
+
+Why it's important
+
+Location indicators reduce confusion for people with cognitive disabilities.
+
+## Success Criterion (SC)
+
+Information about the user's location within a set of web pages is available.
+
+## Intent
+
+The intent of this success criterion is to provide a way for the user to orient herself within a set of web pages, a website, or a web application and find related information.
+
+## Benefits
+
+- This success criterion is helpful for people with a short attention span who may become confused when following a long series of navigation steps to a web page. It is also helpful when a user follows a link directly to a page deep within a set of web pages and needs to navigate that website to understand the content of that page or to find more related information.
+
+## Examples
+
+Links to help user determine their location in a site
+
+A research group is part of an educational department at a university. The group's home page links to the department home page and the university's home page.
+
+A breadcrumb trail
+
+A portal website organizes topics into categories. As the user navigates through categories and subcategories, a breadcrumb trail shows the current location in the hierarchy of categories. Each page also contains a link to the portal home page.
+
+## Related Resources
+
+Resources are for information purposes only, no endorsement implied.
+
+- The Sound of the Accessible Title Tag Separator
+
+## Techniques
+
+Each item in this section represents a technique or combination of techniques that the Accessibility Guidelines Working Group deems sufficient for meeting this success criterion. A technique may go beyond the minimum requirement of the criterion. There may be other ways of meeting the criterion not covered by these techniques. For information on using other techniques, see Understanding Techniques for WCAG Success Criteria, particularly the "Other Techniques" section.
+
+### Sufficient Techniques
+
+- G65: Providing a breadcrumb trail
+
+- G63: Providing a site map
+
+- G128: Indicating current location within navigation bars
+
+- ARIA26: Using aria-current to identify the current item in a set
+
+- G127: Identifying a web page's relationship to a larger collection of web pages
+
+### Advisory Techniques
+
+Although not required for conformance, the following additional techniques should be considered in order to make content more accessible. Not all techniques can be used or would be effective in all situations.
+
+- PDF14: Providing running headers and footers in PDF documents
+
+- PDF17: Specifying consistent page numbering for PDF documents
+
+## Key Terms
+
+assistive technology
+
+hardware and/or software that acts as a user agent, or along with a mainstream user agent, to provide functionality to meet the requirements of users with disabilities that go beyond those offered by mainstream user agents Note 1 Functionality provided by assistive technology includes alternative presentations (e.g., as synthesized speech or magnified content), alternative input methods (e.g., voice), additional navigation or orientation mechanisms, and content transformations (e.g., to make tables more accessible). Note 2 Assistive technologies often communicate data and messages with mainstream user agents by using and monitoring APIs. Note 3 The distinction between mainstream user agents and assistive technologies is not absolute. Many mainstream user agents provide some features to assist individuals with disabilities. The basic difference is that mainstream user agents target broad and diverse audiences that usually include people with and without disabilities. Assistive technologies target narrowly defined populations of users with specific disabilities. The assistance provided by an assistive technology is more specific and appropriate to the needs of its target users. The mainstream user agent may provide important functionality to assistive technologies like retrieving web content from program objects or parsing markup into identifiable bundles. ExampleAssistive technologies that are important in the context of this document include the following: screen magnifiers, and other visual reading assistants, which are used by people with visual, perceptual and physical print disabilities to change text font, size, spacing, color, synchronization with speech, etc. in order to improve the visual readability of rendered text and images; screen readers, which are used by people who are blind to read textual information through synthesized speech or braille; text-to-speech software, which is used by some people with cognitive, language, and learning disabilities to convert text into synthetic speech; speech recognition software, which may be used by people who have some physical disabilities; alternative keyboards, which are used by people with certain physical disabilities to simulate the keyboard (including alternate keyboards that use head pointers, single switches, sip/puff and other special input devices.); alternative pointing devices, which are used by people with certain physical disabilities to simulate mouse pointing and button activations.
+
+set of web pages
+
+collection of web pages that share a common purpose and that are created by the same author, group or organization ExampleExamples include: a publication which is split across multiple web pages, where each page contains one chapter or other significant section of the work. The publication is logically a single contiguous unit, and contains navigation features that enable access to the full set of pages. an e-commerce website shows products in a set of web pages that all share the same navigation and identification. However, when progressing to the checkout process, the template changes; the navigation and other elements are removed, so the pages in that process are functionally and visually different. The checkout pages are not part of the set of product pages. a blog on a sub-domain (e.g. blog.example.com) which has a different navigation and is authored by a distinct set of people from the pages on the primary domain (example.com). Note Different language versions would be considered different sets of web pages.
+
+user agent
+
+any software that retrieves and presents web content for users ExampleWeb browsers, media players, plug-ins, and other programs — including assistive technologies — that help in retrieving, rendering, and interacting with web content.
+
+web page
+
+a non-embedded resource obtained from a single URI using HTTP plus any other resources that are used in the rendering or intended to be rendered together with it by a user agent Note 1 Although any "other resources" would be rendered together with the primary resource, they would not necessarily be rendered simultaneously with each other. Note 2 For the purposes of conformance with these guidelines, a resource must be "non-embedded" within the scope of conformance to be considered a web page. Example 1A web resource including all embedded images and media. Example 2A web mail program built using Asynchronous JavaScript and XML (AJAX). The program lives entirely at http://example.com/mail, but includes an inbox, a contacts area and a calendar. Links or buttons are provided that cause the inbox, contacts, or calendar to display, but do not change the URI of the page as a whole. Example 3A customizable portal site, where users can choose content to display from a set of different content modules. Example 4When you enter "http://shopping.example.com/" in your browser, you enter a movie-like interactive shopping environment where you visually move around in a store dragging products off of the shelves around you and into a visual shopping cart in front of you. Clicking on a product causes it to be demonstrated with a specification sheet floating alongside. This might be a single-page website or just one page within a website.

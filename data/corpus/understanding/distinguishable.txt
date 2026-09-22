@@ -1,0 +1,37 @@
+# Understanding Guideline 1.4 Distinguishable
+
+## Guideline
+
+Make it easier for users to see and hear content including separating foreground from background.
+
+## Intent
+
+While some guidelines are focused on making information available in a form that can be presented in alternate formats, this guideline is concerned with making the default presentation as easy to perceive as possible to people with disabilities. The primary focus is on making it easier for users to separate foreground information from the background. For visual presentations this involves making sure that information presented on top of a background contrasts sufficiently with the background. For audio presentations this involves making sure that foreground sounds are sufficiently louder than the background sounds. Individuals with visual and hearing disabilities have much greater difficulty separating foreground and background information.
+
+## Success Criteria for this Guideline
+
+- 1.4.1 Use of Color
+
+- 1.4.2 Audio Control
+
+- 1.4.3 Contrast (Minimum)
+
+- 1.4.4 Resize Text
+
+- 1.4.5 Images of Text
+
+- 1.4.6 Contrast (Enhanced)
+
+- 1.4.7 Low or No Background Audio
+
+- 1.4.8 Visual Presentation
+
+- 1.4.9 Images of Text (No Exception)
+
+- 1.4.10 Reflow
+
+- 1.4.11 Non-text Contrast
+
+- 1.4.12 Text Spacing
+
+- 1.4.13 Content on Hover or Focus

@@ -1,0 +1,29 @@
+# Understanding Guideline 3.3 Input Assistance
+
+## Guideline
+
+Help users avoid and correct mistakes.
+
+## Intent
+
+Everyone makes mistakes. However, people with some disabilities have more difficulty creating error-free input. In addition, it may be harder for them to detect that they have made an error. Typical error indication methods may not be obvious to them because of a limited field of view, limited color perception, or use of assistive technology. This guideline seeks to reduce the number of serious or irreversible errors that are made, increase the likelihood that all errors will be noticed by the user, and help users understand what they should do to correct an error.
+
+## Success Criteria for this Guideline
+
+- 3.3.1 Error Identification
+
+- 3.3.2 Labels or Instructions
+
+- 3.3.3 Error Suggestion
+
+- 3.3.4 Error Prevention (Legal, Financial, Data)
+
+- 3.3.5 Help
+
+- 3.3.6 Error Prevention (All)
+
+- 3.3.7 Redundant Entry
+
+- 3.3.8 Accessible Authentication (Minimum)
+
+- 3.3.9 Accessible Authentication (Enhanced)

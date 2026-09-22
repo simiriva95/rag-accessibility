@@ -1,7 +1,9 @@
 {
   "compilerOptions": {
     "target": "es2023",
-    "lib": ["es2023"],
+    "lib": [
+      "es2023"
+    ],
     "module": "nodenext",
     "moduleResolution": "nodenext",
     "strict": true,
@@ -11,6 +13,9 @@
     "allowImportingTsExtensions": true,
     "noEmit": true,
     "skipLibCheck": true,
-    "isolatedModules": true
+    "isolatedModules": true,
+    "types": [
+      "node"
+    ]
   }
 }

@@ -1,0 +1,47 @@
+# Understanding Guideline 1.1 Text Alternatives
+
+## Guideline
+
+Provide text alternatives for any non-text content so that it can be changed into other forms people need, such as large print, braille, speech, symbols or simpler language.
+
+## Intent
+
+The purpose of this guideline is to ensure that all non-text content is also available in text. "Text" refers to electronic text, not an image of text. Electronic text has the unique advantage that it is presentation neutral. That is, it can be rendered visually, auditorily, tactilely, or by any combination. As a result, information rendered in electronic text can be presented in whatever form best meets the needs of the user. It can also be easily enlarged, spoken aloud so that it is easier for people with reading disabilities to understand, or rendered in whatever tactile form best meets the needs of a user.
+
+Note
+
+While changing the content into symbols includes changing it into graphic symbols for people with developmental disorders and speech comprehension difficulties, it is not limited to this use of symbols.
+
+## Text alternatives and equivalents match the language of the content
+
+Text alternatives and equivalents should match the human language of the original content (normally the default human language of the page). The 5.2 Conformance Requirements section, through the defined terms used there, states that success criteria be met through accessibility-supported ways (5.2.4), where the technology is used “in the human language of the content.” Where an alternative version is used (5.2.1), it is defined as something that “provides all of the same information and functionality in the same human language.”
+
+## Success Criteria for this Guideline
+
+- 1.1.1 Non-text Content
+
+## Key Terms
+
+assistive technology
+
+hardware and/or software that acts as a user agent, or along with a mainstream user agent, to provide functionality to meet the requirements of users with disabilities that go beyond those offered by mainstream user agents Note 1 Functionality provided by assistive technology includes alternative presentations (e.g., as synthesized speech or magnified content), alternative input methods (e.g., voice), additional navigation or orientation mechanisms, and content transformations (e.g., to make tables more accessible). Note 2 Assistive technologies often communicate data and messages with mainstream user agents by using and monitoring APIs. Note 3 The distinction between mainstream user agents and assistive technologies is not absolute. Many mainstream user agents provide some features to assist individuals with disabilities. The basic difference is that mainstream user agents target broad and diverse audiences that usually include people with and without disabilities. Assistive technologies target narrowly defined populations of users with specific disabilities. The assistance provided by an assistive technology is more specific and appropriate to the needs of its target users. The mainstream user agent may provide important functionality to assistive technologies like retrieving web content from program objects or parsing markup into identifiable bundles. ExampleAssistive technologies that are important in the context of this document include the following: screen magnifiers, and other visual reading assistants, which are used by people with visual, perceptual and physical print disabilities to change text font, size, spacing, color, synchronization with speech, etc. in order to improve the visual readability of rendered text and images; screen readers, which are used by people who are blind to read textual information through synthesized speech or braille; text-to-speech software, which is used by some people with cognitive, language, and learning disabilities to convert text into synthetic speech; speech recognition software, which may be used by people who have some physical disabilities; alternative keyboards, which are used by people with certain physical disabilities to simulate the keyboard (including alternate keyboards that use head pointers, single switches, sip/puff and other special input devices.); alternative pointing devices, which are used by people with certain physical disabilities to simulate mouse pointing and button activations.
+
+human language
+
+language that is spoken, written or signed (through visual or tactile means) to communicate with humans Note See also sign language.
+
+programmatically determined
+
+determined by software from author-supplied data provided in a way that different user agents, including assistive technologies, can extract and present this information to users in different modalities Example 1Determined in a markup language from elements and attributes that are accessed directly by commonly available assistive technology. Example 2Determined from technology-specific data structures in a non-markup language and exposed to assistive technology via an accessibility API that is supported by commonly available assistive technology.
+
+sign language
+
+a language using combinations of movements of the hands and arms, facial expressions, or body positions to convey meaning
+
+text
+
+sequence of characters that can be programmatically determined, where the sequence is expressing something in human language
+
+user agent
+
+any software that retrieves and presents web content for users ExampleWeb browsers, media players, plug-ins, and other programs — including assistive technologies — that help in retrieving, rendering, and interacting with web content.

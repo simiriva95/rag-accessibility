@@ -1,0 +1,111 @@
+# Understanding SC 3.1.1 Language of Page (Level A)
+
+## In Brief
+
+Goal
+
+Assistive technology can determine the language of a page.
+
+What to do
+
+Indicate the predominant language on a page.
+
+Why it's important
+
+People using assistive technology get information in the correct language.
+
+## Success Criterion (SC)
+
+The default human language of each web page can be programmatically determined.
+
+## Intent
+
+The intent of this success criterion is to ensure that content developers provide information in the web page that user agents need to present text and other linguistic content correctly. Both assistive technologies and conventional user agents can render text more accurately when the language of the web page is identified. Screen readers can load the correct pronunciation rules. Visual browsers can display characters and scripts correctly. Media players can show captions correctly. As a result, users with disabilities will be better able to understand the content.
+
+The default human language of the web page is the default text-processing language as discussed in Internationalization Best Practices: Specifying Language in XHTML & HTML Content. When a web page uses several languages, the default text-processing language is the language which is used most. (If several languages are used equally, the first language used should be chosen as the default human language.)
+
+Note
+
+For multilingual sites targeting Conformance Level A, the Working Group strongly encourages developers to follow Success Criterion 3.1.2 Language of Parts as well even though that is a Level AA success criterion.
+
+## Benefits
+
+This success criterion helps:
+
+- people who use screen readers or other technologies that convert text into synthetic speech;
+
+- people who find it difficult to read written material with fluency and accuracy, such as recognizing characters and alphabets or decoding words;
+
+- people with certain cognitive, language and learning disabilities who use text-to-speech software
+
+- people who rely on captions for synchronized media.
+
+## Examples
+
+Example 1. A web page with content in two languages
+
+A web page produced in Germany and written in HTML includes content in both German and English, but most of the content is in German. The default human language is identified as German (de) by the lang attribute on the html element.
+
+## Related Resources
+
+Resources are for information purposes only, no endorsement implied.
+
+- Internationalization Best Practices: Specifying Language in XHTML & HTML Content
+
+- Declaring language in HTML
+
+## Techniques
+
+Each item in this section represents a technique or combination of techniques that the Accessibility Guidelines Working Group deems sufficient for meeting this success criterion. A technique may go beyond the minimum requirement of the criterion. There may be other ways of meeting the criterion not covered by these techniques. For information on using other techniques, see Understanding Techniques for WCAG Success Criteria, particularly the "Other Techniques" section.
+
+### Sufficient Techniques
+
+- H57: Using the language attribute on the HTML element
+
+- PDF16: Setting the default language using the /Lang entry in the document catalog of a PDF document
+
+- PDF19: Specifying the language for a passage or phrase with the Lang entry in PDF documents
+
+### Advisory Techniques
+
+Although not required for conformance, the following additional techniques should be considered in order to make content more accessible. Not all techniques can be used or would be effective in all situations.
+
+- SVR5: Specifying the default language in the HTTP header
+
+## Key Terms
+
+assistive technology
+
+hardware and/or software that acts as a user agent, or along with a mainstream user agent, to provide functionality to meet the requirements of users with disabilities that go beyond those offered by mainstream user agents Note 1 Functionality provided by assistive technology includes alternative presentations (e.g., as synthesized speech or magnified content), alternative input methods (e.g., voice), additional navigation or orientation mechanisms, and content transformations (e.g., to make tables more accessible). Note 2 Assistive technologies often communicate data and messages with mainstream user agents by using and monitoring APIs. Note 3 The distinction between mainstream user agents and assistive technologies is not absolute. Many mainstream user agents provide some features to assist individuals with disabilities. The basic difference is that mainstream user agents target broad and diverse audiences that usually include people with and without disabilities. Assistive technologies target narrowly defined populations of users with specific disabilities. The assistance provided by an assistive technology is more specific and appropriate to the needs of its target users. The mainstream user agent may provide important functionality to assistive technologies like retrieving web content from program objects or parsing markup into identifiable bundles. ExampleAssistive technologies that are important in the context of this document include the following: screen magnifiers, and other visual reading assistants, which are used by people with visual, perceptual and physical print disabilities to change text font, size, spacing, color, synchronization with speech, etc. in order to improve the visual readability of rendered text and images; screen readers, which are used by people who are blind to read textual information through synthesized speech or braille; text-to-speech software, which is used by some people with cognitive, language, and learning disabilities to convert text into synthetic speech; speech recognition software, which may be used by people who have some physical disabilities; alternative keyboards, which are used by people with certain physical disabilities to simulate the keyboard (including alternate keyboards that use head pointers, single switches, sip/puff and other special input devices.); alternative pointing devices, which are used by people with certain physical disabilities to simulate mouse pointing and button activations.
+
+human language
+
+language that is spoken, written or signed (through visual or tactile means) to communicate with humans Note See also sign language.
+
+programmatically determined
+
+determined by software from author-supplied data provided in a way that different user agents, including assistive technologies, can extract and present this information to users in different modalities Example 1Determined in a markup language from elements and attributes that are accessed directly by commonly available assistive technology. Example 2Determined from technology-specific data structures in a non-markup language and exposed to assistive technology via an accessibility API that is supported by commonly available assistive technology.
+
+sign language
+
+a language using combinations of movements of the hands and arms, facial expressions, or body positions to convey meaning
+
+user agent
+
+any software that retrieves and presents web content for users ExampleWeb browsers, media players, plug-ins, and other programs — including assistive technologies — that help in retrieving, rendering, and interacting with web content.
+
+web page
+
+a non-embedded resource obtained from a single URI using HTTP plus any other resources that are used in the rendering or intended to be rendered together with it by a user agent Note 1 Although any "other resources" would be rendered together with the primary resource, they would not necessarily be rendered simultaneously with each other. Note 2 For the purposes of conformance with these guidelines, a resource must be "non-embedded" within the scope of conformance to be considered a web page. Example 1A web resource including all embedded images and media. Example 2A web mail program built using Asynchronous JavaScript and XML (AJAX). The program lives entirely at http://example.com/mail, but includes an inbox, a contacts area and a calendar. Links or buttons are provided that cause the inbox, contacts, or calendar to display, but do not change the URI of the page as a whole. Example 3A customizable portal site, where users can choose content to display from a set of different content modules. Example 4When you enter "http://shopping.example.com/" in your browser, you enter a movie-like interactive shopping environment where you visually move around in a store dragging products off of the shelves around you and into a visual shopping cart in front of you. Clicking on a product causes it to be demonstrated with a specification sheet floating alongside. This might be a single-page website or just one page within a website.
+
+## Test Rules
+
+The following are Test Rules for certain aspects of this Success Criterion. It is not necessary to use these particular Test Rules to check for conformance with WCAG, but they are defined and approved test methods. For information on using Test Rules, see Understanding Test Rules for WCAG Success Criteria.
+
+- HTML page has lang attribute
+
+- HTML page lang attribute has valid language tag
+
+- HTML page lang and xml:lang attributes have matching values
+
+- HTML page language subtag matches default language

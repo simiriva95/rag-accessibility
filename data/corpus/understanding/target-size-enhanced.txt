@@ -1,0 +1,199 @@
+# Understanding SC 2.5.5 Target Size (Enhanced) (Level AAA)
+
+## In Brief
+
+Goal
+
+Controls can be operated more easily, especially on touchscreens.
+
+What to do
+
+Make custom targets at least 44 by 44 pixels.
+
+Why it's important
+
+Some people cannot tap small objects.
+
+## Success Criterion (SC)
+
+The size of the target for pointer inputs is at least 44 by 44 CSS pixels except when:
+
+Equivalent
+
+The target is available through an equivalent link or control on the same page that is at least 44 by 44 CSS pixels;
+
+Inline
+
+The target is in a sentence or block of text;
+
+User Agent Control
+
+The size of the target is determined by the user agent and is not modified by the author;
+
+Essential
+
+A particular presentation of the target is essential to the information being conveyed.
+
+## Intent
+
+The intent of this success criterion is to help users who may have trouble activating a small target because of hand tremors, limited dexterity, or other reasons. If the target is too small, it may be difficult to aim at the target. Mice and similar pointing devices can be hard to use for these users, and a larger target will help them greatly in having positive outcomes on the web page.
+
+Touch is particularly problematic as it is an input mechanism with coarse precision. Users lack the same level of fine control as on inputs such as a mouse or stylus. A finger is larger than a mouse pointer, and generally obstructs the user's view of the precise location on the screen that is being touched/activated.
+
+The issue can be further complicated for responsive and mobile sites that need to accommodate different types of fine and coarse inputs (for example, a site that can be accessed on a traditional desktop or laptop with a mouse, as well as on a tablet or mobile phone with a touchscreen).
+
+While this criterion defines a minimum target size, it is recommended that larger sizes are used to reduce the possibility of unintentional actions. This is particularly relevant if any of the following are true:
+
+- the control is used frequently;
+
+- the result of the interaction cannot be easily undone;
+
+- the control is positioned where it will be difficult to reach, or is near the edge of the screen;
+
+- the control is part of a sequential task.
+
+The targets on a screen can have different purposes and uses, and this success criterion specifies how each is to be handled.
+
+Equivalent targets: If there is more than one target on a screen that performs the same action, only one of the targets need to meet the target size of 44 by 44 CSS pixels.
+
+Inline: The success criterion does not apply to inline targets in sentences or blocks of text. Content is often designed to reflow based on the screen width available. This is known as responsive design and makes it easier to read since you do not need to scroll both horizontally and vertically. In reflowed content, the targets can appear anywhere on a line and can change position based on the width of the available screen. Since targets can appear anywhere on the line, the size cannot be larger than the available text and spacing between the sentences or paragraphs, otherwise the targets could overlap. It is for this reason targets which are contained within one or more sentences are excluded from the target size requirements.
+
+Note
+
+If the target is the full sentence and the sentence is not in a block of text, then the target needs to be at least 44 by 44 CSS pixels.
+
+Note
+
+A footnote or an icon within or at the end of a sentence is considered to be part of a sentence and therefore are excluded from the minimum target size.
+
+User Agent Control: If the size of the target is not modified by the author through CSS or other size properties, then the target does not need to meet the target size of 44 by 44 CSS pixels.
+
+Essential: If the target is required to be a particular target size and cannot be provided in another way, while changing it would essentially change the information or functionality of the content, then the target does not need to meet the target size of 44 by 44 CSS pixels.
+
+## Benefits
+
+- Users who use a mobile device where a touchscreen is the primary mode of interaction
+
+- Users with mobility impairments, such as hand tremors
+
+- Users who use a mobile device in environments where they are exposed to shaking such as public transportation
+
+- Users who find fine motor movements difficult
+
+- Users who access a device using one hand
+
+- Users with large fingers, or who are operating the device with only a part of their finger or knuckle
+
+- Users who have low vision may better see the target
+
+## Examples
+
+Example 1: Buttons
+
+Three buttons are on-screen and the touch target area of each button is 44 by 44 CSS pixels.
+
+Example 2: Equivalent target
+
+Multiple targets are provided on the page that perform the same function. One of the targets is 44 by 44 CSS pixels. The other targets do not have a minimum touch target of 44 by 44 CSS pixels.
+
+Example 3: Text Link in a paragraph
+
+Links within a paragraph of text have varying touch target dimensions. Links within paragraphs of text do no need to meet the 44 by 44 CSS pixels requirements.
+
+Example 4: Text Link in a sentence
+
+A text link that is in a sentence is excluded and does not need to meet the 44 by 44 CSS pixel requirement. If the text link is the full sentence, then the text link target touch area does need to meet the 44 by 44 CSS pixels.
+
+Example 5: Footnote
+
+A footnote link at the end of a sentence does not need to meet the 44 by 44 CSS pixels requirements. The footnote at the end of the sentence is considered to be part of the sentence.
+
+Example 6: Help icon
+
+A help icon within or at the end of a sentence does not need to meet the 44 by 44 CSS pixels requirements. The icon at the end of the sentence is considered to be part of the sentence.
+
+## Related Resources
+
+Resources are for information purposes only, no endorsement implied.
+
+- Apple touch target size recommendations
+
+- Windows UWP Guidelines for touch targets
+
+- Google Material Design Touch targets
+
+- web.dev Accessible tap targets
+
+- Human Fingertips to Investigate the Mechanics of Tactile Sense (PDF)
+
+- One-Handed Thumb Use on Small Touchscreen Devices
+
+## Techniques
+
+Each item in this section represents a technique or combination of techniques that the Accessibility Guidelines Working Group deems sufficient for meeting this success criterion. A technique may go beyond the minimum requirement of the criterion. There may be other ways of meeting the criterion not covered by these techniques. For information on using other techniques, see Understanding Techniques for WCAG Success Criteria, particularly the "Other Techniques" section.
+
+### Sufficient Techniques
+
+- C44: Using CSS to ensure targets are at least 44 by 44 CSS pixels
+
+### Advisory Techniques
+
+Although not required for conformance, the following additional techniques should be considered in order to make content more accessible. Not all techniques can be used or would be effective in all situations.
+
+- Ensuring inline links provide sufficiently large activation target
+
+### Failures
+
+The following are common mistakes that are considered failures of this success criterion by the Accessibility Guidelines Working Group.
+
+- Failure of Success Criterion 2.5.5 due to target being less than 44 by 44 CSS pixels
+
+## Key Terms
+
+assistive technology
+
+hardware and/or software that acts as a user agent, or along with a mainstream user agent, to provide functionality to meet the requirements of users with disabilities that go beyond those offered by mainstream user agents Note 1 Functionality provided by assistive technology includes alternative presentations (e.g., as synthesized speech or magnified content), alternative input methods (e.g., voice), additional navigation or orientation mechanisms, and content transformations (e.g., to make tables more accessible). Note 2 Assistive technologies often communicate data and messages with mainstream user agents by using and monitoring APIs. Note 3 The distinction between mainstream user agents and assistive technologies is not absolute. Many mainstream user agents provide some features to assist individuals with disabilities. The basic difference is that mainstream user agents target broad and diverse audiences that usually include people with and without disabilities. Assistive technologies target narrowly defined populations of users with specific disabilities. The assistance provided by an assistive technology is more specific and appropriate to the needs of its target users. The mainstream user agent may provide important functionality to assistive technologies like retrieving web content from program objects or parsing markup into identifiable bundles. ExampleAssistive technologies that are important in the context of this document include the following: screen magnifiers, and other visual reading assistants, which are used by people with visual, perceptual and physical print disabilities to change text font, size, spacing, color, synchronization with speech, etc. in order to improve the visual readability of rendered text and images; screen readers, which are used by people who are blind to read textual information through synthesized speech or braille; text-to-speech software, which is used by some people with cognitive, language, and learning disabilities to convert text into synthetic speech; speech recognition software, which may be used by people who have some physical disabilities; alternative keyboards, which are used by people with certain physical disabilities to simulate the keyboard (including alternate keyboards that use head pointers, single switches, sip/puff and other special input devices.); alternative pointing devices, which are used by people with certain physical disabilities to simulate mouse pointing and button activations.
+
+blocks of text
+
+more than one sentence of text
+
+content
+
+information and sensory experience to be communicated to the user by means of a user agent, including code or markup that defines the content's structure, presentation, and interactions
+
+CSS pixel
+
+visual angle of about 0.0213 degrees A CSS pixel is the canonical unit of measure for all lengths and measurements in CSS. This unit is density-independent, and distinct from actual hardware pixels present in a display. User agents and operating systems should ensure that a CSS pixel is set as closely as possible to the CSS Values and Units Module Level 3 reference pixel [css3-values], which takes into account the physical dimensions of the display and the assumed viewing distance (factors that cannot be determined by content authors).
+
+essential
+
+if removed, would fundamentally change the information or functionality of the content, and information and functionality cannot be achieved in another way that would conform
+
+pointer input
+
+input from a device that can target a specific coordinate (or set of coordinates) on a screen, such as a mouse, pen, or touch contact Note See the Pointer Events definition for "pointer" [pointerevents].
+
+presentation
+
+rendering of the content in a form to be perceived by users
+
+structure
+
+The way the parts of a web page are organized in relation to each other; and The way a collection of web pages is organized
+
+target
+
+region of the display that will accept a pointer action, such as the interactive area of a user interface component Note If two or more targets are overlapping, the overlapping area should not be included in the measurement of the target size, except when the overlapping targets perform the same action or open the same page.
+
+user agent
+
+any software that retrieves and presents web content for users ExampleWeb browsers, media players, plug-ins, and other programs — including assistive technologies — that help in retrieving, rendering, and interacting with web content.
+
+user interface component
+
+a part of the content that is perceived by users as a single control for a distinct function Note 1 Multiple user interface components may be implemented as a single programmatic element. "Components" here is not tied to programming techniques, but rather to what the user perceives as separate controls. Note 2 User interface components include form elements and links as well as components generated by scripts. Note 3 What is meant by "component" or "user interface component" here is also sometimes called "user interface element". ExampleAn applet has a "control" that can be used to move through content by line or page or random access. Since each of these would need to have a name and be settable independently, they would each be a "user interface component."
+
+web page
+
+a non-embedded resource obtained from a single URI using HTTP plus any other resources that are used in the rendering or intended to be rendered together with it by a user agent Note 1 Although any "other resources" would be rendered together with the primary resource, they would not necessarily be rendered simultaneously with each other. Note 2 For the purposes of conformance with these guidelines, a resource must be "non-embedded" within the scope of conformance to be considered a web page. Example 1A web resource including all embedded images and media. Example 2A web mail program built using Asynchronous JavaScript and XML (AJAX). The program lives entirely at http://example.com/mail, but includes an inbox, a contacts area and a calendar. Links or buttons are provided that cause the inbox, contacts, or calendar to display, but do not change the URI of the page as a whole. Example 3A customizable portal site, where users can choose content to display from a set of different content modules. Example 4When you enter "http://shopping.example.com/" in your browser, you enter a movie-like interactive shopping environment where you visually move around in a store dragging products off of the shelves around you and into a visual shopping cart in front of you. Clicking on a product causes it to be demonstrated with a specification sheet floating alongside. This might be a single-page website or just one page within a website.

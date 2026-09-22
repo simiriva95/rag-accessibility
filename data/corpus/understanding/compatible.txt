@@ -1,0 +1,17 @@
+# Understanding Guideline 4.1 Compatible
+
+## Guideline
+
+Maximize compatibility with current and future user agents, including assistive technologies.
+
+## Intent
+
+The purpose of this guideline is to support compatibility with current and future user agents, especially assistive technologies (AT). This is done both by 1) ensuring that authors do not do things that would break AT (e.g., poorly formed markup) or circumvent AT (e.g., by using unconventional markup or code) and 2) exposing information in the content in standard ways that assistive technologies can recognize and interact with. Since technologies change quickly, and AT developers have much trouble keeping up with rapidly changing technologies, it is important that content follow conventions and be compatible with APIs so that AT can more easily work with new technologies as they evolve.
+
+## Success Criteria for this Guideline
+
+- 4.1.1 Parsing (Obsolete and removed)
+
+- 4.1.2 Name, Role, Value
+
+- 4.1.3 Status Messages

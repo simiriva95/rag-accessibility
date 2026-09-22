@@ -1,0 +1,89 @@
+# Understanding SC 2.4.5 Multiple Ways (Level AA)
+
+## In Brief
+
+Goal
+
+Users can get to content in multiple ways.
+
+What to do
+
+Provide at least two options for reaching the same content.
+
+Why it's important
+
+Not everyone can navigate content in the same way.
+
+## Success Criterion (SC)
+
+More than one way is available to locate a web page within a set of web pages except where the web page is the result of, or a step in, a process.
+
+## Intent
+
+The intent of this success criterion is to make it possible for users to locate content in a manner that best meets their needs. Users may find one technique easier or more comprehensible to use than another.
+
+Even small sites should provide users some means of orientation. For a three or four page site, with all pages linked from the home page, it may be sufficient simply to provide links from and to the home page where the links on the home page can also serve as a site map.
+
+## Benefits
+
+- Providing an opportunity to navigate sites in more than one manner can help people find information faster. Users with visual impairments may find it easier to navigate to the correct part of the site by using a search, rather than scrolling through a large navigation bar using a screen magnifier or screen reader. A person with cognitive disabilities may prefer a table of contents or site map that provides an overview of the site rather than reading and traversing through several web pages. Some users may prefer to explore the site in a sequential manner, moving from web page to web page in order to best understand the concepts and layout.
+
+- Individuals with cognitive limitations may find it easier to use search features than to use a hierarchical navigation scheme that may be difficult to understand.
+
+- For readers of digital publications like EPUBs, being able to scan and navigate to the sections of a work using a table of contents makes it easier both to locate content and to find their position again. Providing an index allows readers to locate specific information they are interested in by topic. In mixed print and digital environments, such as education, having the ability to navigate to static page break locations allows readers to coordinate their position within a work with others.
+
+## Examples
+
+A search mechanism
+
+A large food processing company provides a site containing recipes created using its products. The site provides a search mechanism to search for recipes using a particular ingredient. In addition, it provides a list box that lists several categories of foods. A user may type "soup" in to the search engine or may select "soup" from the list box to go to a page with a list of recipes made from the company's soup products.
+
+Links between web pages
+
+A local hair salon has created a website to promote its services. The site contains only five web pages. There are links on each web page to sequentially move forward or backward through the web pages. In addition, each web page contains a list of links to reach each of the other web pages.
+
+Where content is a result of a process or task - Funds transfer confirmation
+
+An on-line banking site allows fund transfer between accounts via the web. There is no other way to locate the confirmation of fund transfer until the account owner completes the transfer.
+
+Where content is a result of a process or task - Search engine results
+
+A search engine provides the search results based on user input. There is no other way to locate the search results except to perform the search process itself.
+
+## Techniques
+
+Each item in this section represents a technique or combination of techniques that the Accessibility Guidelines Working Group deems sufficient for meeting this success criterion. A technique may go beyond the minimum requirement of the criterion. There may be other ways of meeting the criterion not covered by these techniques. For information on using other techniques, see Understanding Techniques for WCAG Success Criteria, particularly the "Other Techniques" section.
+
+### Sufficient Techniques
+
+- Using two or more of the following techniques: G125: Providing links to navigate to related web pages G64: Providing a Table of Contents G63: Providing a site map G161: Providing a search function to help users find content G126: Providing a list of links to all other web pages G185: Linking to all of the pages on the site from the home page
+
+### Advisory Techniques
+
+Although not required for conformance, the following additional techniques should be considered in order to make content more accessible. Not all techniques can be used or would be effective in all situations.
+
+- PDF2: Creating bookmarks in PDF documents
+
+- H99: Provide a page-selection mechanism
+
+## Key Terms
+
+assistive technology
+
+hardware and/or software that acts as a user agent, or along with a mainstream user agent, to provide functionality to meet the requirements of users with disabilities that go beyond those offered by mainstream user agents Note 1 Functionality provided by assistive technology includes alternative presentations (e.g., as synthesized speech or magnified content), alternative input methods (e.g., voice), additional navigation or orientation mechanisms, and content transformations (e.g., to make tables more accessible). Note 2 Assistive technologies often communicate data and messages with mainstream user agents by using and monitoring APIs. Note 3 The distinction between mainstream user agents and assistive technologies is not absolute. Many mainstream user agents provide some features to assist individuals with disabilities. The basic difference is that mainstream user agents target broad and diverse audiences that usually include people with and without disabilities. Assistive technologies target narrowly defined populations of users with specific disabilities. The assistance provided by an assistive technology is more specific and appropriate to the needs of its target users. The mainstream user agent may provide important functionality to assistive technologies like retrieving web content from program objects or parsing markup into identifiable bundles. ExampleAssistive technologies that are important in the context of this document include the following: screen magnifiers, and other visual reading assistants, which are used by people with visual, perceptual and physical print disabilities to change text font, size, spacing, color, synchronization with speech, etc. in order to improve the visual readability of rendered text and images; screen readers, which are used by people who are blind to read textual information through synthesized speech or braille; text-to-speech software, which is used by some people with cognitive, language, and learning disabilities to convert text into synthetic speech; speech recognition software, which may be used by people who have some physical disabilities; alternative keyboards, which are used by people with certain physical disabilities to simulate the keyboard (including alternate keyboards that use head pointers, single switches, sip/puff and other special input devices.); alternative pointing devices, which are used by people with certain physical disabilities to simulate mouse pointing and button activations.
+
+process
+
+series of user actions where each action is required in order to complete an activity Example 1Successful use of a series of web pages on a shopping site requires users to view alternative products, prices and offers, select products, submit an order, provide shipping information and provide payment information. Example 2An account registration page requires successful completion of a Turing test before the registration form can be accessed. Errata: Changing the example provided to avoid potential confusion View all errata
+
+set of web pages
+
+collection of web pages that share a common purpose and that are created by the same author, group or organization ExampleExamples include: a publication which is split across multiple web pages, where each page contains one chapter or other significant section of the work. The publication is logically a single contiguous unit, and contains navigation features that enable access to the full set of pages. an e-commerce website shows products in a set of web pages that all share the same navigation and identification. However, when progressing to the checkout process, the template changes; the navigation and other elements are removed, so the pages in that process are functionally and visually different. The checkout pages are not part of the set of product pages. a blog on a sub-domain (e.g. blog.example.com) which has a different navigation and is authored by a distinct set of people from the pages on the primary domain (example.com). Note Different language versions would be considered different sets of web pages.
+
+user agent
+
+any software that retrieves and presents web content for users ExampleWeb browsers, media players, plug-ins, and other programs — including assistive technologies — that help in retrieving, rendering, and interacting with web content.
+
+web page
+
+a non-embedded resource obtained from a single URI using HTTP plus any other resources that are used in the rendering or intended to be rendered together with it by a user agent Note 1 Although any "other resources" would be rendered together with the primary resource, they would not necessarily be rendered simultaneously with each other. Note 2 For the purposes of conformance with these guidelines, a resource must be "non-embedded" within the scope of conformance to be considered a web page. Example 1A web resource including all embedded images and media. Example 2A web mail program built using Asynchronous JavaScript and XML (AJAX). The program lives entirely at http://example.com/mail, but includes an inbox, a contacts area and a calendar. Links or buttons are provided that cause the inbox, contacts, or calendar to display, but do not change the URI of the page as a whole. Example 3A customizable portal site, where users can choose content to display from a set of different content modules. Example 4When you enter "http://shopping.example.com/" in your browser, you enter a movie-like interactive shopping environment where you visually move around in a store dragging products off of the shelves around you and into a visual shopping cart in front of you. Clicking on a product causes it to be demonstrated with a specification sheet floating alongside. This might be a single-page website or just one page within a website.

@@ -1,0 +1,13 @@
+{
+  "name": "@rag/ingest",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "corpus": "node src/cli.ts"
+  },
+  "dependencies": {
+    "@rag/core": "workspace:*",
+    "linkedom": "^0.18.12"
+  }
+}

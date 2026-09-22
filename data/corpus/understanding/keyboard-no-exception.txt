@@ -1,0 +1,63 @@
+# Understanding SC 2.1.3 Keyboard (No Exception) (Level AAA)
+
+## In Brief
+
+Goal
+
+Everything can be done with a keyboard.
+
+What to do
+
+Ensure all pointer actions have a keyboard equivalent.
+
+Why it's important
+
+People who can only use the keyboard interface need to be able to accomplish everything.
+
+## Success Criterion (SC)
+
+All functionality of the content is operable through a keyboard interface without requiring specific timings for individual keystrokes.
+
+## Intent
+
+The intent of this success criterion is to ensure that all content is operable from the keyboard. This is the same as Success Criterion 2.1.1, except that no exceptions are allowed. This does not mean that content where the underlying function requires input that depends on the path of the user's movement and not just the endpoints (excluded from the requirements of 2.1.1) must be made keyboard accessible. Rather, it means that content that uses path-dependent input cannot conform to this success criterion and therefore cannot meet Guideline 2.1 at Level AAA.
+
+Note
+
+Platforms and user agents usually have conventions for how web content or applications are controlled with a keyboard interface. If content does not follow the platform/user agent conventions it may be difficult to use, as users will need to learn different interaction methods. As a best practice, content should follow the platform/user agent conventions. However, deviating from these conventions does not fail the normative requirement of this success criterion.
+
+For instance, buttons that have focus can generally be activated using both the Enter key and the Space bar. If a custom button control in a web application instead only reacts to Enter (or even a completely custom key or key combination), this still satisfies the requirements of this success criterion.
+
+Note
+
+This success criterion does not require that every visible control that can be activated using a pointer (such as a mouse or touchscreen input) must also be focusable and actionable using the keyboard. The normative requirement is only that there must be a way for keyboard interface users to perform the same, or comparable, actions and to operate the content. Generally, the easiest way to achieve this is to provide controls that can be operated with all possible input devices; however, if a web application implements a separate mode of operation for keyboard interface users, it will not fail the success criterion.
+
+## Techniques
+
+Each item in this section represents a technique or combination of techniques that the Accessibility Guidelines Working Group deems sufficient for meeting this success criterion. A technique may go beyond the minimum requirement of the criterion. There may be other ways of meeting the criterion not covered by these techniques. For information on using other techniques, see Understanding Techniques for WCAG Success Criteria, particularly the "Other Techniques" section.
+
+### Sufficient Techniques
+
+- No additional techniques exist for this success criterion. Follow techniques for Success Criterion 2.1.1. If that is not possible because there is a requirement for path-dependent input, then it is not possible to meet this Level AAA success criterion.
+
+## Key Terms
+
+functionality
+
+processes and outcomes achievable through user action
+
+keyboard interface
+
+interface used by software to obtain keystroke input Note 1 A keyboard interface allows users to provide keystroke input to programs even if the native technology does not contain a keyboard. ExampleA touchscreen PDA has a keyboard interface built into its operating system as well as a connector for external keyboards. Applications on the PDA can use the interface to obtain keyboard input either from an external keyboard or from other applications that provide simulated keyboard output, such as handwriting interpreters or speech-to-text applications with "keyboard emulation" functionality. Note 2 Operation of the application (or parts of the application) through a keyboard-operated mouse emulator, such as MouseKeys, does not qualify as operation through a keyboard interface because operation of the program is through its pointing device interface, not through its keyboard interface.
+
+process
+
+series of user actions where each action is required in order to complete an activity Example 1Successful use of a series of web pages on a shopping site requires users to view alternative products, prices and offers, select products, submit an order, provide shipping information and provide payment information. Example 2An account registration page requires successful completion of a Turing test before the registration form can be accessed. Errata: Changing the example provided to avoid potential confusion View all errata
+
+## Test Rules
+
+The following are Test Rules for certain aspects of this Success Criterion. It is not necessary to use these particular Test Rules to check for conformance with WCAG, but they are defined and approved test methods. For information on using Test Rules, see Understanding Test Rules for WCAG Success Criteria.
+
+- Iframe with interactive elements is not excluded from tab-order
+
+- Scrollable content can be reached with sequential focus navigation
