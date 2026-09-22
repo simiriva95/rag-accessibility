@@ -1,11 +1,13 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import type { NormalizedDoc } from '@rag/core';
+import { chunkDocument } from './chunk.ts';
 import { normalizeHtml } from './normalize.ts';
 
 const ROOT = resolve(import.meta.dirname, '../../..');
 const RAW = join(ROOT, 'data/raw');
 const CORPUS = join(ROOT, 'data/corpus');
+const INDEX = join(ROOT, 'data/index');
 
 const WCAG_URL = 'https://www.w3.org/TR/WCAG22/';
 const UNDERSTANDING = /https:\/\/www\.w3\.org\/WAI\/WCAG22\/Understanding\/[a-z0-9-]+\.html/g;
@@ -85,6 +87,10 @@ async function main() {
   }));
   await writeFile(join(CORPUS, 'manifest.json'), JSON.stringify(manifest, null, 2) + '\n');
 
+  const chunks = docs.flatMap((doc) => chunkDocument(doc));
+  await mkdir(INDEX, { recursive: true });
+  await writeFile(join(INDEX, 'chunks.json'), JSON.stringify(chunks) + '\n');
+
   const chars = manifest.reduce((n, d) => n + d.chars, 0);
   const bySource = new Map<string, number>();
   for (const d of manifest) {
@@ -94,6 +100,14 @@ async function main() {
   const breakdown = [...bySource].map(([s, n]) => `${s} ${n}`).join(', ');
   process.stdout.write(
     `${docs.length} docs (${breakdown}), ${chars.toLocaleString('en-US')} chars -> data/corpus\n`,
+  );
+
+  const tokens = chunks.map((c) => c.tokenCount).sort((a, b) => a - b);
+  const median = tokens[Math.floor(tokens.length / 2)]!;
+  const withScRef = chunks.filter((c) => c.scRef !== undefined).length;
+  process.stdout.write(
+    `${chunks.length} chunks -> data/index/chunks.json ` +
+      `(median ${median} tokens, max ${tokens.at(-1)}, ${withScRef} carry an SC ref)\n`,
   );
 }
 
