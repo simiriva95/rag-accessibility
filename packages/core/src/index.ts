@@ -15,11 +15,14 @@ export { RRF_K, fuseRrf } from './rrf.ts';
 export {
   locateQuote,
   normalizeForMatch,
+  statusOf,
   verifyClaim,
   verifyClaims,
   type Claim,
+  type ClaimStatus,
   type EntailmentJudge,
   type Normalized,
+  type SentenceStatus,
   type VerifiedClaim,
   type VerifyOptions,
 } from './verify.ts';

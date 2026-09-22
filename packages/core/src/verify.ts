@@ -30,12 +30,23 @@ export type Claim = {
   quote: string;
 };
 
+export type ClaimStatus = 'verified' | 'partial' | 'unsupported';
+
 export type VerifiedClaim = Claim & {
   quoteMatch: boolean;
+  /**
+   * The cited chunks that actually contain the quote, in the order cited.
+   *
+   * Every citation is checked, not just enough of them to find one that works:
+   * a claim that cites four chunks and is carried by one has made three
+   * citations that do not hold, and citation precision is the metric that says
+   * so. The extra work is a substring search per citation.
+   */
+  supportingChunkIds: string[];
   /** Offsets into the NORMALIZED source document, ready to highlight. */
   span?: { chunkId: string; start: number; end: number };
   entailment: number;
-  status: 'verified' | 'partial' | 'unsupported';
+  status: ClaimStatus;
 };
 
 /**
@@ -162,24 +173,52 @@ export async function verifyClaim(
 ): Promise<VerifiedClaim> {
   const { verifiedAt, partialAt } = { ...DEFAULTS, ...options };
 
+  const supporting: { chunkId: string; chunk: Chunk; span: { start: number; end: number } }[] = [];
   for (const chunkId of claim.chunkIds) {
+    // A cited chunk that does not exist cites nothing, and still counts as a
+    // citation that failed.
     const chunk = chunks.get(chunkId);
-    if (!chunk) continue; // a cited chunk that does not exist cites nothing
+    if (!chunk) continue;
 
     const span = locateQuote(claim.quote, chunk);
-    if (!span) continue;
-
-    const entailment = await judge({ sentence: claim.sentence, evidence: chunk.text });
-    return {
-      ...claim,
-      quoteMatch: true,
-      span: { chunkId, ...span },
-      entailment,
-      status: entailment >= verifiedAt ? 'verified' : entailment >= partialAt ? 'partial' : 'unsupported',
-    };
+    if (span) supporting.push({ chunkId, chunk, span });
   }
 
-  return { ...claim, quoteMatch: false, entailment: 0, status: 'unsupported' };
+  const supportingChunkIds = supporting.map((s) => s.chunkId);
+  const first = supporting[0];
+
+  if (!first) {
+    return { ...claim, quoteMatch: false, supportingChunkIds, entailment: 0, status: 'unsupported' };
+  }
+
+  const entailment = await judge({ sentence: claim.sentence, evidence: first.chunk.text });
+  return {
+    ...claim,
+    quoteMatch: true,
+    supportingChunkIds,
+    span: { chunkId: first.chunkId, ...first.span },
+    entailment,
+    status: entailment >= verifiedAt ? 'verified' : entailment >= partialAt ? 'partial' : 'unsupported',
+  };
+}
+
+/**
+ * The status a sentence carries in the answer view.
+ *
+ * A sentence is as good as its best claim: one verified citation is enough to
+ * show it as verified even if the model also attached a weaker one. A sentence
+ * with no claim at all is 'uncited' rather than unsupported — it may be a
+ * connective, and conflating the two would hide the sentences that do make an
+ * unbacked factual claim.
+ */
+export type SentenceStatus = ClaimStatus | 'uncited';
+
+const RANK: Record<ClaimStatus, number> = { verified: 3, partial: 2, unsupported: 1 };
+
+export function statusOf(sentence: string, claims: readonly VerifiedClaim[]): SentenceStatus {
+  const own = claims.filter((claim) => claim.sentence === sentence);
+  if (own.length === 0) return 'uncited';
+  return own.reduce((best, claim) => (RANK[claim.status] > RANK[best] ? claim.status : best), own[0]!.status);
 }
 
 export const verifyClaims = async (

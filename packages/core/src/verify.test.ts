@@ -3,10 +3,12 @@ import type { Chunk } from './types.ts';
 import {
   locateQuote,
   normalizeForMatch,
+  statusOf,
   verifyClaim,
   verifyClaims,
   type Claim,
   type EntailmentJudge,
+  type VerifiedClaim,
 } from './verify.ts';
 
 /** A document the chunk is a slice of, so spans can be checked against it. */
@@ -37,6 +39,16 @@ const judgeReturning = (score: number): EntailmentJudge => async () => score;
 const neverCalled: EntailmentJudge = async () => {
   throw new Error('the judge should not have been asked');
 };
+
+const claimOf = (sentence: string, status: VerifiedClaim['status']): VerifiedClaim => ({
+  sentence,
+  chunkIds: ['c1'],
+  quote: 'a quote',
+  quoteMatch: status !== 'unsupported',
+  supportingChunkIds: status === 'unsupported' ? [] : ['c1'],
+  entailment: status === 'verified' ? 0.9 : status === 'partial' ? 0.5 : 0,
+  status,
+});
 
 const claim = (over: Partial<Claim> = {}): Claim => ({
   sentence: 'A focused component must not be entirely hidden.',
@@ -129,6 +141,24 @@ describe('locateQuote', () => {
   });
 });
 
+describe('statusOf', () => {
+  const verified = claimOf('One.', 'verified');
+  const weak = claimOf('One.', 'unsupported');
+
+  it('takes a sentence to be as good as its best claim', () => {
+    expect(statusOf('One.', [weak, verified])).toBe('verified');
+    expect(statusOf('One.', [verified, weak])).toBe('verified');
+  });
+
+  it('calls a sentence with no claim uncited, not unsupported', () => {
+    expect(statusOf('Here is what it says:', [verified])).toBe('uncited');
+  });
+
+  it('reports the only claim it has', () => {
+    expect(statusOf('One.', [claimOf('One.', 'partial')])).toBe('partial');
+  });
+});
+
 describe('verifyClaim', () => {
   it('marks a matched quote with a high entailment as verified', async () => {
     const result = await verifyClaim(claim(), chunks(chunk()), judgeReturning(0.9));
@@ -180,6 +210,30 @@ describe('verifyClaim', () => {
       partialAt: 0.9,
     });
     expect(strict.status).toBe('unsupported');
+  });
+
+  it('records every cited chunk that holds the quote, not just the first', async () => {
+    const twin = chunk({ id: 'c2' }); // same text, so the quote is in both
+    const result = await verifyClaim(
+      claim({ chunkIds: ['c1', 'c2'] }),
+      chunks(chunk(), twin),
+      judgeReturning(0.9),
+    );
+    expect(result.supportingChunkIds).toEqual(['c1', 'c2']);
+    // The span still comes from the first, so the highlight is deterministic.
+    expect(result.span?.chunkId).toBe('c1');
+  });
+
+  it('leaves a citation that does not hold out of the supporting list', async () => {
+    const other = chunk({ id: 'c0', text: 'Unrelated text.', charStart: 0, charEnd: 15 });
+    const result = await verifyClaim(
+      claim({ chunkIds: ['c0', 'c1', 'missing'] }),
+      chunks(other, chunk()),
+      judgeReturning(0.9),
+    );
+    expect(result.supportingChunkIds).toEqual(['c1']);
+    // Three citations were made and one held: that is what precision measures.
+    expect(result.chunkIds).toHaveLength(3);
   });
 
   it('keeps unsupported claims in the output rather than dropping them', async () => {
