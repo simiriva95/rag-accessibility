@@ -20,6 +20,12 @@ importers:
 
   packages/core: {}
 
+  packages/eval:
+    dependencies:
+      '@rag/core':
+        specifier: workspace:*
+        version: link:../core
+
   packages/ingest:
     dependencies:
       '@rag/core':
