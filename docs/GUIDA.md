@@ -3,8 +3,9 @@
 Questa guida spiega **cosa stiamo costruendo, perché, e come funziona ogni pezzo**.
 È scritta per essere letta a distanza di mesi, quando i dettagli saranno svaniti.
 
-Stato al momento della scrittura: **incrementi 1–4 completati** (settimana 1, parte
-retrieval). Nessuna UI, nessun modello ancora chiamato.
+Stato: **settimana 1 completata**, tranne gli embedding — bloccati sulle credenziali
+Cloudflare (vedi §12). Harness di valutazione e tabella di ablation già funzionanti
+sulla metà lessicale. Nessuna UI.
 
 ---
 
@@ -81,7 +82,7 @@ packages/
   ingest/    CLI Node — fetch, parsing, normalizzazione, chunking, indici statici
   worker/    Cloudflare Worker — /embed, /rerank, /answer          (non ancora creato)
   web/       Vite + React + Tailwind — la demo                     (non ancora creato)
-  eval/      golden set, harness, generatore tabella ablation      (non ancora creato)
+  eval/      golden set, harness, generatore tabella ablation
 data/
   raw/       HTML scaricato, cache locale                          (gitignored)
   corpus/    documenti normalizzati, committati
@@ -98,6 +99,8 @@ I package si creano **quando hanno del codice dentro**. Niente cartelle vuote
 - TypeScript serve **solo per il typecheck** (`noEmit`).
 - Un solo `vitest.config.ts` alla radice per tutti i package.
 - Dipendenze totali finora: `typescript`, `vitest`, `@types/node`, `linkedom`.
+Niente libreria di ricerca, niente tokenizer, niente client HTTP: 90 test, tutto scritto
+a mano dove il brief lo chiede.
 
 Due flag severi attivi, che vale la pena conoscere perché cambiano come si scrive il
 codice:
@@ -291,19 +294,213 @@ mediana 372 token   (p10 231, p90 457, max 480)
 
 ---
 
-## 7. Come si esegue
+## 7. Retrieval lessicale — `packages/core/src/tokenize.ts`, `bm25.ts`
 
-Installazione:
+### Il tokenizer è il pezzo che conta
+
+Gli embedding densi sono bravi col significato e pessimi con gli identificatori:
+`aria-describedby`, `sr-only` e `2.4.11` finiscono tutti nello stesso quartiere
+sfocato. BM25 li recupera, ma solo se il tokenizer li tiene interi.
+
+Quindi ogni composto viene emesso **due volte**, intero e spezzato:
+
+```
+aria-describedby        -> aria-describedby, aria, describedby
+prefers-reduced-motion  -> prefers-reduced-motion, prefers, reduced, motion
+errorMessage            -> errormessage, error, message
+gap-4                   -> gap-4, gap, 4
+```
+
+Una query esatta colpisce la forma intera e prende un punteggio alto; una query
+parziale raggiunge comunque il documento attraverso le parti.
+
+**Unica eccezione: i riferimenti ai criteri.** `2.4.11` non viene mai spezzato, perché
+`2`, `4` e `11` sono rumore che farebbe combaciare ogni criterio numerato con ogni
+altro.
+
+Nessuno stemming, nessuna stopword list. Lo stemming danneggia gli identificatori, e
+la morfologia è esattamente ciò di cui si occupa la metà densa: è il senso stesso del
+retrieval ibrido. Se il golden set dimostrerà il contrario, si aggiunge.
+
+### BM25
+
+```
+              f(q,D) * (k1 + 1)
+  score = Σ  ───────────────────────────────── * idf(q)
+              f(q,D) + k1 * (1 - b + b * |D|/avgdl)
+```
+
+k1=1.2, b=0.75. `idf` nella forma probabilistica smussata `ln(1 + (N-df+0.5)/(df+0.5))`:
+l'`1 +` esterno la tiene positiva per un termine presente in ogni documento, dove la
+forma grezza diventa negativa e inizia a **penalizzare** le corrispondenze.
+
+Un termine ripetuto nella query conta una volta sola: BM25 satura sulla frequenza nel
+documento, non su quante volte l'utente ha scritto la parola.
+
+L'indice viaggia come asset statico, quindi le posting list sono coppie piatte
+`[doc, tf]` invece di oggetti. Un test verifica il round-trip JSON, un altro confronta
+il punteggio con la formula calcolata a mano.
+
+**Sul corpus reale: 8.377 termini, avgdl 211, 1,22 MB.**
+
+---
+
+## 8. Retrieval denso — `packages/core/src/dense.ts`
+
+### Quantizzazione int8
+
+I vettori vengono normalizzati L2, poi ciascuno viene scalato per la sua componente
+più grande prima di essere arrotondato a int8. **Scala per vettore, non globale**:
+le componenti di un vettore unitario in 384 dimensioni stanno ben dentro `[-1, 1]` e
+una scala globale butterebbe via quasi tutto l'intervallo. Costo: 4 byte per vettore.
+
+Un test tiene la top-10 quantizzata ad almeno 9 elementi su 10 della top-10 float32
+esatta. Serve a garantire che **non sia la quantizzazione a decidere i risultati**.
+
+### Il formato binario
+
+```
+magic u32 | count u32 | dims u32 | scales f32[count] | codes i8[count*dims]
+```
+
+Un blob solo invece di JSON: 1600 × 384 int8 sono 600 KB grezzi contro ~1,6 MB come
+array JSON di numeri. La decodifica **copia** invece di creare una vista, perché un
+`Float32Array` richiede allineamento a 4 byte che un buffer scaricato non sempre ha —
+c'è un test apposta per il caso disallineato.
+
+---
+
+## 9. Fusione — `packages/core/src/rrf.ts`
+
+```
+score(d) = Σ  1 / (k + rank_r(d))
+```
+
+**Nessuna normalizzazione dei punteggi, ed è il punto.** I punteggi BM25 sono somme
+illimitate di termini idf; il coseno sta in `[-1, 1]` e si accalca vicino al massimo.
+Mapparli su una scala comune significa scegliere una mappatura, e ogni scelta è una
+manopola che si rompe al corpus successivo. RRF legge **solo l'ordinamento**, che è
+l'unica cosa su cui i due retriever concordano sul significato.
+
+`k = 60` smorza la testa di ogni lista: il divario fra rank 1 e rank 2 è piccolo, così
+un retriever non può trascinare un documento sulla sola propria sicurezza. **L'accordo
+fra retriever pesa più della certezza dentro uno solo.**
+
+I pareggi si rompono per id, così una run è riproducibile.
+
+---
+
+## 10. Il golden set — `packages/eval/src/golden.ts`
+
+40 domande, scritte **prima** di qualunque tuning.
+
+### Perché ancore e non id
+
+L'annotazione punta a `{docId, heading?}`, non a id di chunk grezzi. Gli id sono
+content-addressed e sopravvivono a una re-indicizzazione, ma **non** a una modifica del
+chunker: e riannotare 40 domande a mano ogni volta che si muove un parametro è il modo
+in cui un golden set smette silenziosamente di essere mantenuto.
+
+`resolve.ts` traduce le ancore in id e **solleva un errore** quando un'ancora smette di
+combaciare. È successo otto volte mentre scrivevo questo set.
+
+### Rilevanza graduata
+
+La prima passata annotava ogni chunk del documento giusto. Risultato: fino al **2,8%
+del corpus marcato rilevante per una sola domanda**, e Recall@5 avrebbe letto 1.0 per
+un retriever che non aveva imparato niente.
+
+```
+grado 2  primary  — il chunk che risponde davvero
+grado 1  related  — stesso documento, contesto utile, non la risposta
+grado 0  tutto il resto
+```
+
+Recall e MRR si misurano sui soli primary; nDCG usa entrambi i gradi. Mediana: 3 chunk
+primary per domanda. Un test fallisce se un insieme graduato supera il 5% del corpus.
+
+### Due posti dove cercare un'ancora
+
+`headingPath` contiene **solo gli antenati**. Un criterio abbastanza corto da essere
+stato fuso dentro un chunk ha il proprio titolo nel *corpo* del chunk, non nel percorso
+— ed è il caso della maggior parte dei criteri WCAG, le cui formulazioni sono lunghe
+tre righe. Cercare solo nel percorso li perdeva in silenzio. Il testo del titolo che
+compare come prosa, invece, non conta.
+
+### Composizione
+
+| Tipo | N | Perché |
+|---|---:|---|
+| identifier | 12 | `2.4.11`, `4.5:1`, `aria-describedby`, `prefers-reduced-motion`. Qui vive l'argomento per l'ibrido |
+| conceptual | 17 | Parafrasi senza vocabolario condiviso, dove BM25 arranca |
+| design | 6 | La risposta è in GOV.UK, non in WCAG |
+| refusal | 5 | Domande a cui il corpus **non può** rispondere |
+
+Le refusal vanno dal fuori-dominio totale (Kubernetes) ai quasi-centri: WCAG 3.0, il
+costo di un audit. Un sistema che va bene ovunque e poi inventa una risposta qui ha
+fallito proprio nella cosa di cui parla il progetto.
+
+---
+
+## 11. Metriche e ablation — `packages/eval/src/metrics.ts`, `harness.ts`
+
+**Recall ha il denominatore limitato a k.** Una domanda la cui risposta occupa davvero
+13 chunk non potrebbe superare 0.38 di Recall@5 nella forma non limitata: quel numero
+misurerebbe quanto è ampia l'annotazione, non quanto ha fatto bene il retrieval.
+
+**nDCG usa la forma a guadagno esponenziale** `(2^g - 1)/log2(rank+1)`. È ciò che rende
+utile la rilevanza graduata: un chunk primary finisce nettamente sopra uno related,
+non un gradino sopra.
+
+Un retriever che non può girare viene riportato come **non disponibile, con il motivo**.
+Mai eliminato in silenzio, mai sostituito coi numeri della riga accanto. L'unico valore
+della tabella è che chi legge possa fidarsi di ciò che dichiara.
+
+### Baseline attuale (solo metà lessicale)
+
+| Retriever | Recall@5 | Recall@10 | Recall@30 | Success@5 | nDCG@10 | MRR |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| BM25 only | 40.5% | 59.2% | 78.2% | 68.6% | 0.466 | 0.514 |
+
+### Recall@10 per tipo di domanda — la metà interessante
+
+| Retriever | identifier (12) | conceptual (17) | design (6) |
+| --- | ---: | ---: | ---: |
+| BM25 only | **66.5%** | **47.3%** | 78.3% |
+
+Ecco l'argomento, già visibile: **BM25 prende 66,5% sugli identificatori e 47,3% sui
+concetti**. Quel divario è esattamente ciò per cui esiste la metà densa. L'ablation
+mostrerà se si chiude — o se la premessa era sbagliata.
+
+La tabella viene rigenerata da `pnpm --filter @rag/eval ablation` e committata in
+[ABLATION.md](ABLATION.md).
+
+---
+
+## 12. Come si esegue
 
 ```bash
 pnpm install
 ```
 
-Generare corpus e chunk (la prima volta scarica ~200 pagine, poi è offline grazie
+Corpus, chunk e indice BM25 (la prima volta scarica ~290 pagine, poi è offline grazie
 alla cache in `data/raw/`):
 
 ```bash
 pnpm --filter @rag/ingest corpus
+```
+
+Interrogare da terminale:
+
+```bash
+pnpm --filter @rag/ingest ask "how much colour contrast does large text need"
+```
+
+Golden set e tabella di ablation:
+
+```bash
+pnpm --filter @rag/eval golden
+pnpm --filter @rag/eval ablation
 ```
 
 Typecheck e test:
@@ -312,25 +509,45 @@ Typecheck e test:
 pnpm typecheck && pnpm test
 ```
 
+### Credenziali Cloudflare — il blocco attuale
+
+Senza queste, embedding e metà densa non girano. Tutto il resto funziona.
+
+1. Su `dash.cloudflare.com`, copiare l'**Account ID** (è nell'URL, o nella sidebar).
+2. Creare un **API token** con il permesso `Workers AI: Read`.
+3. Creare `.env` nella radice del repo:
+
+```
+CLOUDFLARE_ACCOUNT_ID=...
+CLOUDFLARE_API_TOKEN=...
+```
+
+Poi rilanciare `pnpm --filter @rag/ingest corpus`: genera `data/index/vectors.bin` e
+l'ablation si riempie da sola. I vettori sono cachati per id di chunk, quindi una
+re-indicizzazione dopo una modifica al chunker non rispende la quota su tutto il corpus.
+
 ---
 
-## 8. Cosa manca
+## 13. Cosa manca
 
-### Settimana 1 (in corso)
+### Settimana 1 — fatta
 
 - [x] Scheletro workspace e tipi condivisi
-- [x] Fetch e normalizzazione WCAG 2.2
-- [x] Fetch e normalizzazione GOV.UK Design System
+- [x] Fetch e normalizzazione WCAG 2.2 + GOV.UK Design System
 - [x] Chunker structure-aware con offset verificati
-- [ ] **Tokenizer + BM25 Okapi** (k1=1.2, b=0.75), scritto a mano
-- [ ] **Embedding in fase di build** via Workers AI, quantizzazione int8
-- [ ] **Fusione RRF** (k=60) e CLI che risponde da terminale
-- [ ] **Golden set**: 40 domande annotate a mano
+- [x] Tokenizer + BM25 Okapi scritti a mano
+- [x] Indice denso int8 + formato binario
+- [x] Fusione RRF
+- [x] CLI che risponde da terminale
+- [x] Golden set, 40 domande con rilevanza graduata
+- [x] Metriche e harness di ablation
+- [ ] Embedding del corpus — **bloccato sulle credenziali**
 
 ### Settimana 2
 
-Reranking (`bge-reranker-base`), verificatore a tre livelli, harness di valutazione,
-tabella di ablation generata.
+Reranker `bge-reranker-base` su Workers AI con rate limiting per IP e modalità
+degradata, verificatore a tre livelli, metriche di citazione, tabella di ablation
+completa.
 
 ### Settimana 3
 
@@ -339,7 +556,7 @@ README.
 
 ---
 
-## 9. Il layer di verifica (progetto, non ancora scritto)
+## 14. Il layer di verifica (progettato, non ancora scritto)
 
 Il modello non produce prosa con note a piè di pagina. Produce **claim**:
 
@@ -375,7 +592,7 @@ type VerifiedClaim = Claim & {
 
 ---
 
-## 10. Decisioni prese, per memoria
+## 15. Decisioni prese, per memoria
 
 | Decisione | Motivo |
 |---|---|
