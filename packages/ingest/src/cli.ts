@@ -1,6 +1,6 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
-import type { NormalizedDoc } from '@rag/core';
+import { buildBm25Index, type NormalizedDoc } from '@rag/core';
 import { chunkDocument } from './chunk.ts';
 import { normalizeHtml } from './normalize.ts';
 
@@ -91,6 +91,13 @@ async function main() {
   await mkdir(INDEX, { recursive: true });
   await writeFile(join(INDEX, 'chunks.json'), JSON.stringify(chunks) + '\n');
 
+  // The chunk's heading path is indexed with its body: a criterion's number
+  // lives in the heading, and that is exactly what identifier queries ask for.
+  const bm25 = buildBm25Index(
+    chunks.map((c) => ({ id: c.id, text: `${c.headingPath.join(' ')}\n${c.text}` })),
+  );
+  await writeFile(join(INDEX, 'bm25.json'), JSON.stringify(bm25));
+
   const chars = manifest.reduce((n, d) => n + d.chars, 0);
   const bySource = new Map<string, number>();
   for (const d of manifest) {
@@ -108,6 +115,12 @@ async function main() {
   process.stdout.write(
     `${chunks.length} chunks -> data/index/chunks.json ` +
       `(median ${median} tokens, max ${tokens.at(-1)}, ${withScRef} carry an SC ref)\n`,
+  );
+
+  const bytes = (await readFile(join(INDEX, 'bm25.json'))).byteLength;
+  process.stdout.write(
+    `BM25: ${Object.keys(bm25.postings).length.toLocaleString('en-US')} terms, ` +
+      `avgdl ${bm25.avgdl.toFixed(0)}, ${(bytes / 1024 / 1024).toFixed(2)} MB\n`,
   );
 }
 
