@@ -8,7 +8,7 @@
   "scripts": {
     "test": "vitest run --passWithNoTests",
     "test:watch": "vitest",
-    "typecheck": "tsc --noEmit --pretty"
+    "typecheck": "tsc --noEmit --pretty && tsc -p packages/web --noEmit --pretty"
   },
   "devDependencies": {
     "@types/node": "^26.6.2",

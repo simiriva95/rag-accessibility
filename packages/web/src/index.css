@@ -1,0 +1,31 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-verified: oklch(0.55 0.13 155);
+  --color-partial: oklch(0.58 0.13 75);
+  --color-unsupported: oklch(0.55 0.19 25);
+  --color-unverified: oklch(0.55 0.02 260);
+}
+
+/*
+ * 2.4.11 Focus Not Obscured and 2.4.13 Focus Appearance: the indicator is a
+ * solid outline with an offset, so it stays visible against any background the
+ * component sits on, and it is never removed — only restyled.
+ */
+:focus-visible {
+  outline: 3px solid currentColor;
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* The debugger's movement is decoration. Without it nothing is lost. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

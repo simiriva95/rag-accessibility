@@ -64,7 +64,7 @@ async function loadDense(chunks: Chunk[]): Promise<DenseIndex | undefined> {
  * changed, only what happens to their results.
  */
 async function queryVectors(questions: ResolvedQuestion[]): Promise<Map<string, Float32Array> | undefined> {
-  const cacheFile = join(ROOT, 'data/raw/query-embeddings.json');
+  const cacheFile = join(ROOT, '.cache/raw/query-embeddings.json');
   const cache: Record<string, number[]> = await readFile(cacheFile, 'utf8')
     .then((json) => JSON.parse(json) as Record<string, number[]>)
     .catch(() => ({}));

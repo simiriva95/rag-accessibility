@@ -84,10 +84,15 @@ packages/
   web/       Vite + React + Tailwind — la demo                     (non ancora creato)
   eval/      golden set, harness, generatore tabella ablation
 data/
-  raw/       HTML scaricato, cache locale                          (gitignored)
   corpus/    documenti normalizzati, committati
   index/     asset statici generati                                (gitignored)
+.cache/
+  raw/       HTML scaricato, cache locale                          (gitignored)
 ```
+
+`data/` contiene **solo** ciò che il sito deve servire, così in Vite diventa
+`publicDir` e non serve nessuno script di copia. La cache dell'HTML scaricato sta
+fuori, perché è una cache, non un dato.
 
 I package si creano **quando hanno del codice dentro**. Niente cartelle vuote
 "per dopo".
@@ -484,7 +489,7 @@ pnpm install
 ```
 
 Corpus, chunk e indice BM25 (la prima volta scarica ~290 pagine, poi è offline grazie
-alla cache in `data/raw/`):
+alla cache in `.cache/raw/`):
 
 ```bash
 pnpm --filter @rag/ingest corpus

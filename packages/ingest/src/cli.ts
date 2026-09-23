@@ -12,7 +12,7 @@ import { EMBEDDING_DIMS, credentialsFromEnv, documentText, embedTexts } from './
 import { normalizeHtml } from './normalize.ts';
 
 const ROOT = resolve(import.meta.dirname, '../../..');
-const RAW = join(ROOT, 'data/raw');
+const RAW = join(ROOT, '.cache/raw');
 const CORPUS = join(ROOT, 'data/corpus');
 const INDEX = join(ROOT, 'data/index');
 
@@ -136,6 +136,21 @@ async function main() {
 
   const chunks = docs.flatMap((doc) => chunkDocument(doc));
   await mkdir(INDEX, { recursive: true });
+
+  // Split, because the two halves are needed at different moments. Everything
+  // but the text is what retrieval and rendering a result list need, and it
+  // gzips to 54 KB against 502 KB for the whole file. The text is only wanted
+  // once a result is shown or a quote is checked, so it loads alongside rather
+  // than gating first paint.
+  await writeFile(
+    join(INDEX, 'chunks.meta.json'),
+    JSON.stringify(chunks.map(({ text: _text, ...meta }) => meta)),
+  );
+  await writeFile(
+    join(INDEX, 'chunks.text.json'),
+    JSON.stringify(Object.fromEntries(chunks.map((c) => [c.id, c.text]))),
+  );
+  // Kept whole as well: the CLIs and the eval harness want one file.
   await writeFile(join(INDEX, 'chunks.json'), JSON.stringify(chunks) + '\n');
 
   // Indexed over the same text that gets embedded: the heading path carries
