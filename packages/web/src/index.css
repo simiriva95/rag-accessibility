@@ -18,6 +18,27 @@
   border-radius: 2px;
 }
 
+/*
+ * The debugger's connectors draw themselves in, once, when a run finishes.
+ * pathLength="1" normalises every curve to the same length so they all take
+ * the same time regardless of how far the reranker moved a result.
+ *
+ * The resting state is a fully drawn line, so when the rule below collapses
+ * the duration to nothing the curve is simply there — no fill-mode needed, and
+ * nothing is lost by never seeing it move.
+ */
+@keyframes draw-connector {
+  from {
+    stroke-dashoffset: 1;
+  }
+}
+
+.connector {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 0;
+  animation: draw-connector 600ms ease-out;
+}
+
 /* The debugger's movement is decoration. Without it nothing is lost. */
 @media (prefers-reduced-motion: reduce) {
   *,

@@ -1,4 +1,6 @@
 import { useEffect, useId, useRef, useState } from 'react';
+import { RetrievalDebugger } from './debugger.tsx';
+import { Tabs } from './tabs.tsx';
 import { useRetrieval, type DegradedStage, type Retrieval, type Run } from './use-retrieval.ts';
 
 const EXAMPLES = [
@@ -13,6 +15,7 @@ export function App() {
   const [query, setQuery] = useState('');
   const inputId = useId();
   const announcement = useAnnouncement(retrieval);
+  const [view, setView] = useState<'results' | 'retrieval'>('results');
 
   const submit = (value: string) => {
     setQuery(value);
@@ -32,7 +35,7 @@ export function App() {
         {announcement}
       </p>
 
-      <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
+      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
         <header>
           <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
             Hybrid retrieval, verified citations
@@ -89,7 +92,22 @@ export function App() {
           </ul>
 
           <IndexStatus retrieval={retrieval} />
-          <Results retrieval={retrieval} />
+
+          <div id="results" className="mt-8">
+            <Tabs
+              label="Views"
+              selected={view}
+              onSelect={setView}
+              tabs={[
+                { id: 'results' as const, label: 'Answer', panel: <Results retrieval={retrieval} /> },
+                {
+                  id: 'retrieval' as const,
+                  label: 'Retrieval',
+                  panel: <RetrievalDebugger retrieval={retrieval} />,
+                },
+              ]}
+            />
+          </div>
         </main>
       </div>
     </div>
@@ -206,15 +224,21 @@ function DegradedNotice({ degraded }: { degraded: DegradedStage[] }) {
 function Results({ retrieval }: { retrieval: Retrieval }) {
   const { run, meta, text } = retrieval;
 
-  if (!run) return <div id="results" />;
+  if (!run) {
+    return (
+      <p className="mt-6 text-slate-600 dark:text-slate-400">
+        Ask a question to see an answer with its citations checked.
+      </p>
+    );
+  }
 
   return (
-    <section id="results" aria-labelledby="results-heading" className="mt-8">
-      <h2 id="results-heading" className="text-lg font-semibold">
+    <section aria-labelledby="results-heading" className="mt-6">
+      <h2 id="results-heading" className="sr-only">
         Results
       </h2>
 
-      <dl className="mt-2 flex flex-wrap gap-x-6 gap-y-1 text-sm text-slate-600 dark:text-slate-400">
+      <dl className="mt-0 flex flex-wrap gap-x-6 gap-y-1 text-sm text-slate-600 dark:text-slate-400">
         {run.stages.map((stage) => (
           <div key={stage.name} className="flex gap-1.5">
             <dt className="capitalize">{stage.name}</dt>
