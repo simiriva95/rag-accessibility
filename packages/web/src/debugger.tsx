@@ -141,7 +141,12 @@ function Columns({
     <div ref={containerRef} className="relative mt-4">
       <Connectors containerRef={containerRef} rows={rows} fused={fused} final={final} />
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      {/*
+        * Above the connector overlay. An absolutely positioned SVG paints over
+        * static siblings, so without this the curves are drawn across the card
+        * text rather than behind it.
+        */}
+      <div className="relative grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {columns.map((column) => (
           <ColumnView
             key={column.id}

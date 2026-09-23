@@ -43,6 +43,16 @@ body {
 }
 
 /*
+ * A layout utility on a dialog overrides the user-agent rule that hides it
+ * while closed, which leaves its buttons laid out and reachable by Tab even
+ * though nothing is visible. The selector outranks the utility class, so the
+ * dialog can still be a flex container while open.
+ */
+dialog:not([open]) {
+  display: none;
+}
+
+/*
  * 2.4.11 Focus Not Obscured and 2.4.13 Focus Appearance: the indicator is a
  * solid outline with an offset, so it stays visible against any background the
  * component sits on, and it is never removed — only restyled.

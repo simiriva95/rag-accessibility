@@ -85,7 +85,10 @@ export function SourceDialog({ target, onClose }: { target?: SourceTarget; onClo
         onClose();
       }}
       onClick={(event) => event.target === dialogRef.current && onClose()}
-      aria-labelledby="source-title"
+      // Only while there is something to label: the contents are conditional,
+      // so a constant aria-labelledby points at an id that does not exist for
+      // as long as the dialog is closed.
+      {...(target ? { 'aria-labelledby': 'source-title' } : {})}
       className="m-auto flex max-h-[85dvh] w-[min(56rem,92vw)] flex-col overflow-hidden rounded-lg bg-white p-0 text-slate-900 backdrop:bg-slate-900/60 dark:bg-slate-900 dark:text-slate-100"
     >
       {target && (
