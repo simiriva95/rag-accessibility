@@ -3,13 +3,18 @@
 Questa guida spiega **cosa stiamo costruendo, perché, e come funziona ogni pezzo**.
 È scritta per essere letta a distanza di mesi, quando i dettagli saranno svaniti.
 
-Stato: **settimane 1 e 2 completate a livello di codice**. Embedding, reranker e
-generazione girano solo con le credenziali (vedi §12), ma tutto il resto — retrieval,
-verifica, metriche, Worker — è scritto e testato. 206 test. Nessuna UI.
+Stato: **tutte e tre le settimane completate a livello di codice**, UI inclusa. Embedding,
+reranker e generazione girano solo con le credenziali (vedi §22); tutto il resto — retrieval,
+verifica, metriche, Worker, applicazione web, pass di accessibilità — è scritto, testato e
+verificato nel browser. 206 test, zero violazioni axe.
+
+Il [README](../README.md) è la versione per chi ha cinque minuti. Questa guida è la versione per
+chi deve rimetterci le mani.
 
 ---
 
 ## 1. Cos'è
+
 
 Un sistema di domande e risposte su un corpus di accessibilità (WCAG 2.2 +
 GOV.UK Design System) con:
@@ -34,6 +39,7 @@ Il punto non è "ho costruito un RAG". Il punto è che **il retrieval è visibil
 
 ## 2. Architettura
 
+
 **Indice statico nel client, modelli all'edge.**
 
 ```
@@ -41,22 +47,26 @@ Il punto non è "ho costruito un RAG". Il punto è che **il retrieval è visibil
   ────────────────────              ─────────────────              ──────────────
   fetch HTML sorgenti
   normalizzazione        ─────►  data/corpus/*.txt
-  chunking + offset      ─────►  data/index/chunks.json
-  embedding (int8)       ─────►  data/index/vectors.bin
-  indice BM25            ─────►  data/index/bm25.json
+  chunking + offset      ─────►  chunks.meta.json
+  embedding (int8)       ─────►  vectors.bin                Cloudflare Worker:
+  indice BM25            ─────►  bm25.json                  - /embed   vettore query
+                                       │                    - /rerank  bge-reranker-base
+                                       ▼                    - /answer  Gemini Flash
+                                 Web Worker:                - /entail  giudice NLI
+                                 - scan denso coseno   ◄──►
+                                 - BM25
+                                 - fusione RRF
                                        │
                                        ▼
-                                 Web Worker:
-                                 - scan denso coseno          Cloudflare Worker:
-                                 - BM25                  ◄──► - /embed  (query)
-                                 - fusione RRF                - /rerank
-                                       │                      - /answer
-                                       ▼
                                  UI React
+                                 ← la VERIFICA gira qui
 ```
 
 Solo tre cose non sono precalcolabili e girano sull'edge: **embedding della query**,
 **reranking**, **generazione**. Tutto il resto è un file statico servito da CDN.
+
+**La verifica gira nel browser**, contro lo stesso testo dei chunk mostrato al modello: niente
+della verifica è preso sulla fiducia dal servizio che ha prodotto la risposta.
 
 ### Alternative scartate (e perché)
 
@@ -69,20 +79,21 @@ Solo tre cose non sono precalcolabili e girano sull'edge: **embedding della quer
 
 Con ~1600 chunk, uno scan lineare del coseno su 384 dimensioni sono ~600k
 moltiplicazioni: millisecondi in un Web Worker. Un indice ANN qui **costa accuratezza
-senza far guadagnare tempo percepibile**. È una scelta da motivare nel README, non una
-mancanza.
+senza far guadagnare tempo percepibile**. A dieci volte questo corpus la risposta cambia; a
+questa dimensione è prematuro.
 
 ---
 
 ## 3. Struttura del repository
 
+
 ```
 packages/
   core/      TypeScript puro — tipi, BM25, RRF, verifica. Zero dipendenze runtime
   ingest/    CLI Node — fetch, parsing, normalizzazione, chunking, indici statici
-  worker/    Cloudflare Worker — /embed, /rerank, /answer
-  web/       Vite + React + Tailwind — la demo                     (non ancora creato)
-  eval/      golden set, harness, generatore tabella ablation
+  worker/    Cloudflare Worker — /embed, /rerank, /answer, /entail
+  web/       Vite + React + Tailwind — la demo
+  eval/      golden set, harness, ablation, sonda di fabbricazione
 data/
   corpus/    documenti normalizzati, committati
   index/     asset statici generati                                (gitignored)
@@ -118,6 +129,7 @@ codice:
 
 ## 4. Il corpus
 
+
 ### Fonti
 
 | Fonte | Documenti | Caratteri | Quota |
@@ -145,6 +157,7 @@ Il differenziatore del progetto è la verifica, non l'ampiezza del corpus.
 ---
 
 ## 5. Normalizzazione — `packages/ingest/src/normalize.ts`
+
 
 ### Il problema
 
@@ -196,6 +209,7 @@ recupera con una regex.
 ---
 
 ## 6. Chunking — `packages/ingest/src/chunk.ts`
+
 
 È il pezzo più delicato della settimana 1.
 
@@ -301,6 +315,7 @@ mediana 372 token   (p10 231, p90 457, max 480)
 
 ## 7. Retrieval lessicale — `packages/core/src/tokenize.ts`, `bm25.ts`
 
+
 ### Il tokenizer è il pezzo che conta
 
 Gli embedding densi sono bravi col significato e pessimi con gli identificatori:
@@ -352,6 +367,7 @@ il punteggio con la formula calcolata a mano.
 
 ## 8. Retrieval denso — `packages/core/src/dense.ts`
 
+
 ### Quantizzazione int8
 
 I vettori vengono normalizzati L2, poi ciascuno viene scalato per la sua componente
@@ -377,6 +393,7 @@ c'è un test apposta per il caso disallineato.
 
 ## 9. Fusione — `packages/core/src/rrf.ts`
 
+
 ```
 score(d) = Σ  1 / (k + rank_r(d))
 ```
@@ -396,6 +413,7 @@ I pareggi si rompono per id, così una run è riproducibile.
 ---
 
 ## 10. Il golden set — `packages/eval/src/golden.ts`
+
 
 40 domande, scritte **prima** di qualunque tuning.
 
@@ -449,6 +467,7 @@ fallito proprio nella cosa di cui parla il progetto.
 
 ## 11. Metriche e ablation — `packages/eval/src/metrics.ts`, `harness.ts`
 
+
 **Recall ha il denominatore limitato a k.** Una domanda la cui risposta occupa davvero
 13 chunk non potrebbe superare 0.38 di Recall@5 nella forma non limitata: quel numero
 misurerebbe quanto è ampia l'annotazione, non quanto ha fatto bene il retrieval.
@@ -482,90 +501,8 @@ La tabella viene rigenerata da `pnpm --filter @rag/eval ablation` e committata i
 
 ---
 
-## 12. Come si esegue
+## 12. Il layer di verifica — `packages/core/src/verify.ts`
 
-```bash
-pnpm install
-```
-
-Corpus, chunk e indice BM25 (la prima volta scarica ~290 pagine, poi è offline grazie
-alla cache in `.cache/raw/`):
-
-```bash
-pnpm --filter @rag/ingest corpus
-```
-
-Interrogare da terminale:
-
-```bash
-pnpm --filter @rag/ingest ask "how much colour contrast does large text need"
-```
-
-Golden set e tabella di ablation:
-
-```bash
-pnpm --filter @rag/eval golden
-pnpm --filter @rag/eval ablation
-```
-
-Typecheck e test:
-
-```bash
-pnpm typecheck && pnpm test
-```
-
-### Credenziali Cloudflare — il blocco attuale
-
-Senza queste, embedding e metà densa non girano. Tutto il resto funziona.
-
-1. Su `dash.cloudflare.com`, copiare l'**Account ID** (è nell'URL, o nella sidebar).
-2. Creare un **API token** con il permesso `Workers AI: Read`.
-3. Creare `.env` nella radice del repo:
-
-```
-CLOUDFLARE_ACCOUNT_ID=...
-CLOUDFLARE_API_TOKEN=...
-```
-
-Poi rilanciare `pnpm --filter @rag/ingest corpus`: genera `data/index/vectors.bin` e
-l'ablation si riempie da sola. I vettori sono cachati per id di chunk, quindi una
-re-indicizzazione dopo una modifica al chunker non rispende la quota su tutto il corpus.
-
----
-
-## 13. Cosa manca
-
-### Settimana 1 — fatta
-
-- [x] Scheletro workspace e tipi condivisi
-- [x] Fetch e normalizzazione WCAG 2.2 + GOV.UK Design System
-- [x] Chunker structure-aware con offset verificati
-- [x] Tokenizer + BM25 Okapi scritti a mano
-- [x] Indice denso int8 + formato binario
-- [x] Fusione RRF
-- [x] CLI che risponde da terminale
-- [x] Golden set, 40 domande con rilevanza graduata
-- [x] Metriche e harness di ablation
-- [ ] Embedding del corpus — **bloccato sulle credenziali**
-
-### Settimana 2 — in corso
-
-- [x] Verificatore a tre livelli (§14)
-- [x] Metriche di citazione (§15)
-- [x] Sonda di fabbricazione: 189 casi avversari, 0 errori (§16)
-- [x] Cloudflare Worker: `/embed`, `/rerank`, `/answer`, `/entail` con degradazione onesta (§17)
-- [x] Giudice LLM concreto dietro `EntailmentJudge`, a batch (§18)
-- [ ] Deploy del Worker — **credenziali**
-- [ ] Tabella di ablation completa — **credenziali**
-
-### Settimana 3
-
-Retrieval debugger, evidenziazione delle citazioni, pass di accessibilità, deploy,
-README.
-
----
-
-## 14. Il layer di verifica — `packages/core/src/verify.ts`
 
 Il modello non produce prosa con note a piè di pagina. Produce **claim**:
 
@@ -628,7 +565,8 @@ proprio le frasi che fanno un'affermazione fattuale non sostenuta.
 
 ---
 
-## 15. Metriche di citazione — `packages/eval/src/citation.ts`
+## 13. Metriche di citazione — `packages/eval/src/citation.ts`
+
 
 Si calcolano sulle **frasi** della risposta, non solo sui claim. Un modello che cita
 due frasi alla perfezione e ne lascia sei senza citazione prenderebbe 100% su
@@ -652,7 +590,8 @@ una risposta lunga surclasserebbe una corta.
 
 ---
 
-## 16. La sonda di fabbricazione — `packages/eval/src/fabrication.test.ts`
+## 14. La sonda di fabbricazione — `packages/eval/src/fabrication.test.ts`
+
 
 È la parte che rende l'affermazione verificabile. Il progetto sostiene che le citazioni
 sono verificate invece che dichiarate: vale qualcosa solo se il controllo non accetta
@@ -676,7 +615,8 @@ controllo 1 da solo, ed è il punto — il controllo economico regge quasi tutto
 
 ---
 
-## 17. Il Cloudflare Worker — `packages/worker/src/index.ts`
+## 15. Il Cloudflare Worker — `packages/worker/src/index.ts`
+
 
 Le tre cose che non si possono precalcolare. Tutto il resto è un file statico.
 
@@ -752,7 +692,8 @@ Bundle: 10,98 KiB, 3,77 KiB gzip.
 
 ---
 
-## 18. Il giudice di entailment — `packages/core/src/entailment.ts`
+## 16. Il giudice di entailment — `packages/core/src/entailment.ts`
+
 
 ### Perché a batch
 
@@ -810,7 +751,8 @@ cui citazioni hanno retto tutte non deve sparire perché il giudice era occupato
 
 ---
 
-## 19. Test d'integrazione — `packages/eval/src/pipeline.test.ts`
+## 17. Test d'integrazione — `packages/eval/src/pipeline.test.ts`
+
 
 Percorre l'intera catena di contratti sui chunk veri: cosa si chiede al modello, cosa
 accetta il parser, cosa ne fa il verificatore, cosa dicono le metriche.
@@ -828,7 +770,362 @@ Distingue in particolare tre cose che è facile confondere:
 
 ---
 
-## 20. Decisioni prese, per memoria
+## 18. L'applicazione web — `packages/web/`
+
+
+Vite + React + TypeScript + Tailwind. Due viste in un tablist: **Answer** e **Retrieval**.
+
+### Gli asset: misurare prima di decidere
+
+`chunks.json` è stato **diviso in due** a build time, dopo averlo misurato:
+
+| File | Raw | Gzip | Quando serve |
+|---|---:|---:|---|
+| `chunks.meta.json` | 550 KB | **54 KB** | primo paint |
+| `bm25.json` | 1.247 KB | 379 KB | prima query |
+| `vectors.bin` | ~600 KB | ~600 KB | prima query (binario, già denso) |
+| `chunks.text.json` | 1.967 KB | 445 KB | primo risultato mostrato |
+
+Tutto tranne il testo — cioè ciò che servono retrieval e lista risultati — sta in
+**54 KB contro i 502 KB** del file intero. Il testo non blocca più il primo paint.
+
+### `data/` è il `publicDir`
+
+La cache dell'HTML scaricato è stata spostata da `data/raw/` a `.cache/raw/`. Così `data/`
+contiene **solo** ciò che il sito deve servire, e in Vite diventa `publicDir` con una riga di
+configurazione: nessuno script di copia, nessun duplicato da 4 MB, stessi file in dev e in build.
+
+La cache è una cache, non un deliverable.
+
+### Il Web Worker non fa rete
+
+`packages/web/src/retrieval.worker.ts` riceve il vettore della query già calcolato all'edge.
+Così resta una **funzione pura dei suoi input**, e la metà lessicale continua a funzionare
+identica quando l'edge non c'è.
+
+Rifiuta anche un `vectors.bin` il cui numero di righe non combacia con la lista dei chunk:
+accoppierebbe ogni query col documento sbagliato, in silenzio.
+
+Perché un Worker, visto che lo scan sono millisecondi? Perché **l'indice arriva come un megabyte
+di JSON**, e fare il parsing sul thread principale fa saltare i frame su un telefono.
+
+### Una sola live region
+
+Avevo scritto una live region per componente. È sbagliato: **diversi screen reader annunciano solo
+le region già presenti nell'albero di accessibilità quando il contenuto cambia** — una region che
+compare insieme al suo contenuto non annuncia in modo affidabile.
+
+Ora ce n'è **una sola**, montata per tutta la vita della pagina, di cui cambia il testo. Annuncia
+cosa è cambiato (`"8 risultati in 6 millisecondi. 3 fasi non hanno girato."`), non rilegge la lista.
+
+Lo stesso refactor ha eliminato un `<p>` dentro un `<p>` che la prima versione produceva —
+invalidava proprio la struttura in cui la region vive.
+
+---
+
+## 19. Il retrieval debugger — `packages/web/src/debugger.tsx`
+
+
+Quattro colonne, da sinistra a destra nell'ordine in cui la pipeline le esegue, ciascuna con la
+propria latenza.
+
+### Ciò che rende visibile
+
+```
+Dense            BM25             Fused            Reranked
+cosine           idf sum          RRF, k=60        cross-encoder
+                 18.258           0.016
+                 15.000           0.016
+                 14.228           0.016
+```
+
+I punteggi sono mostrati **nelle loro unità vere e mai messi su una scala comune**. Il coseno sta
+in `[0, 1]`; BM25 è una somma illimitata di termini idf; RRF è una somma di ranghi reciproci
+attorno a 0.016.
+
+**Tre scale incompatibili affiancate sono l'argomento per fondere sul rango invece che sul
+punteggio**, mostrato invece che dichiarato.
+
+Una fase che non ha girato **tiene la sua colonna e dice il perché**, invece di sparire.
+
+### Il movimento, e la sua versione scritta
+
+Le curve fra la colonna fusa e il set finale sono **misurate dalle righe impaginate**, non
+calcolate da un'altezza di riga presunta — così restano corrette quando un titolo va a capo — e
+ridisegnate al resize.
+
+Il disegno è **decorazione** e trattato come tale: è `aria-hidden`, sparisce quando le colonne si
+impilano, e **ogni riga finale dichiara comunque a parole** il rango di provenienza
+(`▲ 3 from #7`, `held #1`).
+
+### Due bug che si vedevano solo nel browser
+
+**Il breakpoint sbagliato.** La prima versione confrontava la larghezza del *container* con `1024`,
+che è il breakpoint del *viewport*. Dentro un container con `max-width` il container è sempre più
+stretto: **le curve non si disegnavano mai**. Ora la condizione legge il layout vero — se la riga
+finale inizia dopo la fine di quella fusa, le colonne sono affiancate. Immune alla deriva fra due
+costanti che devono restare d'accordo.
+
+**L'overlay dipingeva sopra il testo.** Un SVG in `position: absolute` dipinge sopra i fratelli
+statici. Le curve passavano *sopra* le card. Ora la griglia è posizionata e passano sotto.
+
+### L'animazione, e cosa resta senza
+
+Le curve si disegnano in 600 ms con `pathLength="1"`, così durano tutte uguale indipendentemente da
+quanto il reranker ha spostato il risultato.
+
+Sotto `prefers-reduced-motion` la durata collassa e **lo stato di riposo è la linea già finita**:
+non serve `animation-fill-mode`, e non si perde nulla a non vederla muovere.
+
+---
+
+## 20. La vista risposta — `packages/web/src/answer-view.tsx`
+
+
+### L'ordine è il punto
+
+Generazione → **poi** verifica. Il modello scrive claim; è **il browser** a controllare se le
+citazioni sono davvero nei chunk citati, **contro lo stesso testo mostrato al modello**.
+
+Niente della verifica è preso sulla fiducia dal servizio che ha prodotto la risposta, e una
+citazione a un chunk mai consegnato al generatore non può passare in silenzio.
+
+### Quattro stati, prima del colore
+
+| Stato | Simbolo | Sottolineatura |
+|---|---|---|
+| `verified` | `✓` | solid |
+| `partial` | `≈` | dashed |
+| `unsupported` | `✕` | wavy |
+| `unverified` | `?` | dotted |
+
+**Simbolo e stile di decorazione portano il significato prima che intervenga il colore**, e ogni
+stato è anche nel nome accessibile del pulsante. Il colore è il terzo segnale, non il primo.
+
+Le frasi non supportate **si mostrano**. Nasconderle renderebbe la demo una dimostrazione che il
+modello non sbaglia mai, che non è ciò che si sta affermando.
+
+### Il documento sorgente si rende verbatim
+
+`source-dialog.tsx` mostra il testo normalizzato **esatto**, marcatori dei titoli inclusi.
+
+Non è pigrizia: `charStart` e `charEnd` sono offset *in quel testo*, e abbellirlo togliendo
+caratteri è **esattamente** come un'evidenziazione finisce due parole più a sinistra. Ciò che il
+lettore vede è ciò contro cui gli offset sono stati misurati.
+
+Un passaggio senza claim a cui puntare evidenzia il proprio chunk, il che esercita lo stesso
+percorso.
+
+### Escape non chiudeva il dialog
+
+Un `<dialog>` nativo dà focus trap, ripristino del focus e inertizzazione della pagina senza
+reimplementare niente. Ma **Escape non chiudeva**: keydown *trusted*, `defaultPrevented: false`, e
+**nessun evento `cancel` né `close`** — il percorso CloseWatcher su cui si appoggia un dialog
+nativo semplicemente non girava nel motore di test.
+
+Ora Escape è gestito esplicitamente. Per una demo che deve reggere anni, tre righe valgono più di
+una feature di piattaforma che si comporta come documentato.
+
+Il focus torna comunque al pulsante che l'ha aperto — quello la piattaforma lo fa bene.
+
+---
+
+## 21. Il pass di accessibilità
+
+
+Un RAG sull'accessibilità con una UI inaccessibile è squalificante, quindi la demo punta a WCAG
+2.2 AA su sé stessa.
+
+**axe-core 4.13** su quattro stati (idle, Answer, Retrieval, dialog aperto): **zero violazioni**.
+Fissato come devDependency invece che preso da CDN, così l'audit è riproducibile e la versione sta
+nel lockfile.
+
+### Due difetti veri, nessuno visibile a schermo
+
+**Il dialog chiuso era raggiungibile da tastiera.** Una utility di layout sull'elemento sovrascrive
+la regola user-agent `dialog:not([open]) { display: none }`: il Tab entrava in contenuto invisibile
+— due stop in fondo a ogni pagina. Un selettore più specifico la ripristina lasciando il dialog
+flex da aperto.
+
+**`aria-labelledby` puntava a un id inesistente** finché il dialog era chiuso, perché il contenuto
+è condizionale.
+
+In più: gerarchia dei titoli `h1 → h3`, e `body` senza sfondo (l'area di overscroll cadeva sul
+default del browser, bianco dietro una pagina scura).
+
+### Due misure sbagliate prima di essere giuste
+
+Le annoto perché sono il tipo di errore che porta a conclusioni false.
+
+**axe dava 30 contrasti "unable to determine".** Sembrava `oklch`, la palette di Tailwind v4.
+**Non era quello**: il pannello del browser era a larghezza zero, quindi ogni elemento aveva un box
+degenere (`h1` largo 0px). Con un viewport vero si risolvono da soli.
+
+**I 133 "incomplete" residui** sul tab Retrieval sono l'SVG dei connettori che sovrappone
+geometricamente le card: axe non ci vede attraverso, qualunque sia l'ordine di pittura. Misurato
+direttamente leggendo i pixel dipinti: **112 elementi di testo, nessuno sotto soglia, minimo 7.66**.
+
+Anche la misura del contrasto ha richiesto tre tentativi. `getComputedStyle` restituisce `oklch()`
+non risolto; anche `canvas.fillStyle` lo ritorna tale e quale. **Il metodo che non mente è dipingere
+il pixel e rileggerlo con `getImageData`.**
+
+### Colori per schema
+
+Un colore solo non può reggere 4.5:1 contro bianco *e* contro quasi-nero. Misurato: la versione a
+valore unico lasciava `partial` a 4.37 su bianco e `unsupported` a 3.78 su scuro.
+
+Due set: **5.58–6.85 in light, 7.53–11.42 in dark**. Il marcatore è testo, quindi vale 1.4.3, non
+il 3:1 di 1.4.11.
+
+### Tastiera
+
+28 stop, tutti raggiungibili, ordine coerente con la pagina. Tablist secondo il pattern APG con
+roving tabindex.
+
+Indicatore confermato con un Tab **reale**: `solid 3px`, offset 2px, `:focus-visible` attivo — cosa
+che `getComputedStyle(el, ':focus-visible')` non può mostrare, perché è una pseudo-classe e non un
+pseudo-elemento.
+
+**Non fatto:** una passata con screen reader reale. Serve una persona con VoiceOver o NVDA.
+
+---
+
+## 22. Come si esegue
+
+
+```bash
+pnpm install
+```
+
+Corpus, chunk e indice BM25 (la prima volta scarica ~290 pagine, poi è offline grazie
+alla cache in `.cache/raw/`):
+
+```bash
+pnpm --filter @rag/ingest corpus
+```
+
+Far partire la demo:
+
+```bash
+pnpm --filter @rag/web dev
+```
+
+Interrogare da terminale, senza browser:
+
+```bash
+pnpm --filter @rag/ingest ask "how much colour contrast does large text need"
+```
+
+Golden set e tabella di ablation:
+
+```bash
+pnpm --filter @rag/eval golden
+pnpm --filter @rag/eval ablation
+```
+
+Typecheck e test:
+
+```bash
+pnpm typecheck && pnpm test
+```
+
+### Credenziali Cloudflare — il blocco attuale
+
+Senza queste, embedding e metà densa non girano. Tutto il resto funziona.
+
+1. Su `dash.cloudflare.com`, copiare l'**Account ID** (è nell'URL, o nella sidebar).
+2. Creare un **API token** con il permesso `Workers AI: Read`.
+3. Creare `.env` nella radice del repo:
+
+```
+CLOUDFLARE_ACCOUNT_ID=...
+CLOUDFLARE_API_TOKEN=...
+```
+
+Poi rilanciare `pnpm --filter @rag/ingest corpus`: genera `data/index/vectors.bin` e
+l'ablation si riempie da sola. I vettori sono cachati per id di chunk, quindi una
+re-indicizzazione dopo una modifica al chunker non rispende la quota su tutto il corpus.
+
+### Deploy del Worker
+
+```bash
+cd packages/worker
+npx wrangler secret put GEMINI_API_KEY   # chiave da ai.google.dev
+npx wrangler deploy
+```
+
+Poi impostare `VITE_WORKER_URL` per la build web. Senza, l'app gira su BM25 e lo dichiara,
+elencando ogni fase che non ha girato e perché.
+
+### L'audit di accessibilità
+
+axe-core è fissato come devDependency. Si esegue nella pagina reale — una run in jsdom non
+vedrebbe il contrasto:
+
+```js
+// nella console del browser, con la demo aperta
+const src = await (await fetch('/@fs/<percorso-repo>/node_modules/axe-core/axe.min.js')).text();
+new Function(src)();
+const r = await axe.run(document, { runOnly: ['wcag2a','wcag2aa','wcag21a','wcag21aa','wcag22aa'] });
+r.violations;
+```
+
+Va ripetuto su **quattro stati**: idle, Answer, Retrieval, dialog aperto. E con un **viewport
+vero**: a larghezza zero ogni elemento ha un box degenere e axe restituisce `incomplete` ovunque.
+
+---
+
+## 23. Cosa manca
+
+
+### Settimana 1 — fatta
+
+- [x] Scheletro workspace e tipi condivisi
+- [x] Fetch e normalizzazione WCAG 2.2 + GOV.UK Design System
+- [x] Chunker structure-aware con offset verificati
+- [x] Tokenizer + BM25 Okapi scritti a mano
+- [x] Indice denso int8 + formato binario
+- [x] Fusione RRF
+- [x] CLI che risponde da terminale
+- [x] Golden set, 40 domande con rilevanza graduata
+- [x] Metriche e harness di ablation
+- [ ] Embedding del corpus — **credenziali**
+
+### Settimana 2 — fatta
+
+- [x] Verificatore a tre livelli (§12)
+- [x] Metriche di citazione (§13)
+- [x] Sonda di fabbricazione: 189 casi avversari, 0 errori (§14)
+- [x] Cloudflare Worker: `/embed`, `/rerank`, `/answer`, `/entail` con degradazione onesta (§15)
+- [x] Giudice LLM concreto dietro `EntailmentJudge`, a batch (§16)
+- [x] Test d'integrazione sull'intera catena (§17)
+
+### Settimana 3 — fatta
+
+- [x] Applicazione web, retrieval in Web Worker (§18)
+- [x] Retrieval debugger a quattro colonne (§19)
+- [x] Vista risposta con stato per frase e sorgente evidenziata (§20)
+- [x] Pass di accessibilità: axe pulito, tastiera, contrasto misurato (§21)
+- [x] README
+
+### Cosa resta davvero
+
+| | Perché |
+|---|---|
+| Embedding del corpus | **credenziali Cloudflare** |
+| Deploy del Worker | **credenziali Cloudflare + Gemini** |
+| Tre righe dell'ablation | dipendono dai due punti sopra |
+| GIF del debugger | serve il reranker: senza, ogni risultato tiene il rango e la GIF sarebbe otto linee orizzontali |
+| Passata con screen reader | serve una persona con VoiceOver o NVDA |
+| Vista risposta esercitata su una risposta vera | serve la generazione |
+
+Il codice per riempire ogni casella è scritto e testato. Tutto passa da due variabili in `.env` e
+un `wrangler deploy`.
+
+---
+
+## 24. Decisioni prese, per memoria
+
 
 | Decisione | Motivo |
 |---|---|
@@ -839,9 +1136,26 @@ Distingue in particolare tre cose che è facile confondere:
 | Il chunker sta in `ingest`, non in `core` | Usa `node:crypto`; `core` deve girare nel browser |
 | Esempi GOV.UK scartati | 92% della pagina, nove copie della stessa tabella |
 | Nessuna deduplicazione del boilerplate fra pagine | Non dovrebbe emergere per query reali; si rivaluta col golden set |
+| `chunks.json` diviso meta/testo | 54 KB contro 502 KB gzip sul percorso che blocca il primo paint |
+| Cache HTML fuori da `data/` | Così `data/` diventa il `publicDir` di Vite senza script di copia |
+| Il Web Worker non fa rete | Resta funzione pura dei suoi input; la metà lessicale regge senza edge |
+| Una sola live region per la pagina | Molti screen reader annunciano solo le region già presenti al cambiamento |
+| Escape gestito a mano nel dialog | CloseWatcher non ha fatto scattare né `cancel` né `close` nel motore di test |
+| Colori di stato per schema | Un valore solo non regge 4.5:1 contro bianco *e* contro quasi-nero |
+| `axe-core` come devDependency, non da CDN | Audit riproducibile, versione nel lockfile |
 
 ### Nota sulla dimensione del corpus
 
 Il brief prevedeva 3.000–5.000 chunk. Con questo corpus siamo a **1.592**. Non è un
 problema: rende più solido l'argomento "scan lineare invece di ANN" e riduce l'indice
-int8 a poche centinaia di KB. Il README riporterà il numero reale.
+int8 a poche centinaia di KB. Il README riporta il numero reale.
+
+### Nota su cosa NON è stato misurato
+
+Scrivendo il README avevo messo nello schizzo del debugger dei punteggi del reranker — `0.94`,
+`0.71` — per uno stadio che **non ha mai girato**. Inventati per far sembrare completa
+l'illustrazione, cioè esattamente il fallimento che questo progetto denuncia. Sostituiti con ciò
+che l'app rende davvero.
+
+Vale come promemoria: in questo repo un numero o è stato misurato, o non si scrive.
+
