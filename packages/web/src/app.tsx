@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, useState } from 'react';
+import { AnswerView } from './answer-view.tsx';
 import { RetrievalDebugger } from './debugger.tsx';
 import { Tabs } from './tabs.tsx';
 import { useRetrieval, type DegradedStage, type Retrieval, type Run } from './use-retrieval.ts';
@@ -92,6 +93,7 @@ export function App() {
           </ul>
 
           <IndexStatus retrieval={retrieval} />
+          {retrieval.run && <DegradedNotice degraded={retrieval.run.degraded} />}
 
           <div id="results" className="mt-8">
             <Tabs
@@ -99,7 +101,7 @@ export function App() {
               selected={view}
               onSelect={setView}
               tabs={[
-                { id: 'results' as const, label: 'Answer', panel: <Results retrieval={retrieval} /> },
+                { id: 'results' as const, label: 'Answer', panel: <AnswerView retrieval={retrieval} /> },
                 {
                   id: 'retrieval' as const,
                   label: 'Retrieval',
@@ -184,16 +186,6 @@ function IndexStatus({ retrieval }: { retrieval: Retrieval }) {
   );
 }
 
-/**
- * A snippet of a chunk. Heading blocks are dropped: the deepest one is already
- * the card's own title, and the rest are structure rather than prose.
- */
-const preview = (text: string) =>
-  text
-    .split('\n\n')
-    .filter((block) => !block.startsWith('#'))
-    .join(' ');
-
 const STAGE_LABEL: Record<string, string> = {
   embed: 'Query embedding',
   dense: 'Dense retrieval',
@@ -205,7 +197,7 @@ function DegradedNotice({ degraded }: { degraded: DegradedStage[] }) {
 
   return (
     <div className="mt-6 rounded-md border border-amber-600 px-3 py-2 text-sm">
-      <h3 className="font-medium">Some stages did not run</h3>
+      <h2 className="font-medium">Some stages did not run</h2>
       <ul className="mt-1 list-disc space-y-0.5 pl-5 text-slate-700 dark:text-slate-300">
         {degraded.map((entry) => (
           <li key={`${entry.stage}-${entry.reason}`}>
@@ -218,84 +210,5 @@ function DegradedNotice({ degraded }: { degraded: DegradedStage[] }) {
         The results below are real, and worse than they would otherwise be.
       </p>
     </div>
-  );
-}
-
-function Results({ retrieval }: { retrieval: Retrieval }) {
-  const { run, meta, text } = retrieval;
-
-  if (!run) {
-    return (
-      <p className="mt-6 text-slate-600 dark:text-slate-400">
-        Ask a question to see an answer with its citations checked.
-      </p>
-    );
-  }
-
-  return (
-    <section aria-labelledby="results-heading" className="mt-6">
-      <h2 id="results-heading" className="sr-only">
-        Results
-      </h2>
-
-      <dl className="mt-0 flex flex-wrap gap-x-6 gap-y-1 text-sm text-slate-600 dark:text-slate-400">
-        {run.stages.map((stage) => (
-          <div key={stage.name} className="flex gap-1.5">
-            <dt className="capitalize">{stage.name}</dt>
-            <dd className="tabular-nums">{stage.ms.toFixed(1)} ms</dd>
-          </div>
-        ))}
-        {run.timings.embed !== undefined && (
-          <div className="flex gap-1.5">
-            <dt>embed</dt>
-            <dd className="tabular-nums">{Math.round(run.timings.embed)} ms</dd>
-          </div>
-        )}
-        {run.timings.rerank !== undefined && (
-          <div className="flex gap-1.5">
-            <dt>rerank</dt>
-            <dd className="tabular-nums">{Math.round(run.timings.rerank)} ms</dd>
-          </div>
-        )}
-        <div className="flex gap-1.5 font-medium text-slate-900 dark:text-slate-100">
-          <dt>total</dt>
-          <dd className="tabular-nums">{Math.round(run.timings.total)} ms</dd>
-        </div>
-      </dl>
-
-      <DegradedNotice degraded={run.degraded} />
-
-      <ol className="mt-6 space-y-4">
-        {run.final.map((hit, index) => {
-          const chunk = meta.get(hit.chunkId);
-          if (!chunk) return null;
-          const body = text(hit.chunkId);
-
-          return (
-            <li key={hit.chunkId} className="rounded-md border border-slate-200 p-4 dark:border-slate-800">
-              <p className="text-sm text-slate-500 dark:text-slate-400">
-                <span className="tabular-nums">{index + 1}.</span> {chunk.docTitle}
-                {chunk.scRef && <> · SC {chunk.scRef}</>}
-              </p>
-              <h3 className="mt-1 font-medium">{chunk.headingPath.at(-1) ?? chunk.docTitle}</h3>
-              {body && (
-                <p className="mt-2 line-clamp-4 text-sm text-slate-700 dark:text-slate-300">
-                  {preview(body)}
-                </p>
-              )}
-              <p className="mt-2 text-sm">
-                <a
-                  href={chunk.sourceUrl}
-                  className="underline underline-offset-2"
-                  rel="noreferrer noopener"
-                >
-                  {chunk.docId}
-                </a>
-              </p>
-            </li>
-          );
-        })}
-      </ol>
-    </section>
   );
 }

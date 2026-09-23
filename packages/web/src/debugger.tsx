@@ -51,6 +51,7 @@ export function RetrievalDebugger({ retrieval }: { retrieval: Retrieval }) {
 
   return (
     <div className="mt-6" onKeyDown={(event) => event.key === 'Escape' && setSelected(undefined)}>
+      <h2 className="sr-only">Retrieval stages</h2>
       <p className="max-w-3xl text-sm text-slate-600 dark:text-slate-400">
         Each column is a stage, in the order it runs. The scores are shown in their own units and
         are never put on a common scale — that is why fusion reads the ordering rather than the
@@ -58,6 +59,15 @@ export function RetrievalDebugger({ retrieval }: { retrieval: Retrieval }) {
       </p>
 
       <Columns columns={columns} meta={meta} selected={selected} onSelect={setSelected} />
+
+      <p className="mt-3 text-sm text-slate-600 dark:text-slate-400">
+        <span className="font-medium text-slate-900 dark:text-slate-100">
+          {Math.round(run.timings.total)} ms
+        </span>{' '}
+        end to end
+        {run.timings.embed !== undefined && `, of which ${Math.round(run.timings.embed)} ms embedding`}
+        {run.timings.rerank !== undefined && ` and ${Math.round(run.timings.rerank)} ms reranking`}.
+      </p>
 
       <Detail run={run} meta={meta} selected={selected} />
     </div>

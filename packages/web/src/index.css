@@ -1,10 +1,45 @@
 @import 'tailwindcss';
 
+/*
+ * Citation states. The symbol and the underline style carry the meaning; these
+ * colours are the third signal, not the first.
+ *
+ * Two sets, because one colour cannot clear 4.5:1 against both white and
+ * near-black — measured, the single-value version left `partial` at 4.37 on
+ * white and `unsupported` at 3.78 on dark. The marker glyph is text, so 1.4.3
+ * applies to it and not merely the 3:1 of 1.4.11.
+ */
 @theme {
-  --color-verified: oklch(0.55 0.13 155);
-  --color-partial: oklch(0.58 0.13 75);
-  --color-unsupported: oklch(0.55 0.19 25);
-  --color-unverified: oklch(0.55 0.02 260);
+  --color-verified: oklch(0.5 0.13 155);
+  --color-partial: oklch(0.5 0.12 75);
+  --color-unsupported: oklch(0.5 0.19 25);
+  --color-unverified: oklch(0.47 0.02 260);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-verified: oklch(0.78 0.15 155);
+    --color-partial: oklch(0.82 0.14 85);
+    --color-unsupported: oklch(0.72 0.17 25);
+    --color-unverified: oklch(0.74 0.02 260);
+  }
+}
+
+/*
+ * The page background belongs on body, not only on a wrapper: the overscroll
+ * area and anything painted outside the wrapper would otherwise fall back to
+ * the browser default, which is white behind a dark page.
+ */
+body {
+  background-color: var(--color-white);
+  color: var(--color-slate-900);
+}
+
+@media (prefers-color-scheme: dark) {
+  body {
+    background-color: var(--color-slate-950);
+    color: var(--color-slate-100);
+  }
 }
 
 /*

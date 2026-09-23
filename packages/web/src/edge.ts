@@ -1,4 +1,4 @@
-import { createRemoteJudge, type EntailmentJudge } from '@rag/core';
+import { createRemoteJudge, type EntailmentJudge, type ModelAnswer } from '@rag/core';
 
 /**
  * Client for the Cloudflare Worker.
@@ -48,10 +48,13 @@ export const rerank = (
 ): Promise<Edge<{ results: { id: string; score: number }[]; degraded?: Degraded }>> =>
   call('/rerank', { query, candidates });
 
+/** What the worker returns from /answer: a parsed answer, or why there is none. */
+export type Generated = { answer: ModelAnswer; dropped: string[] } | { degraded: Degraded };
+
 export const generate = (
   question: string,
   sources: { id: string; text: string }[],
-): Promise<Edge<unknown>> => call('/answer', { question, sources });
+): Promise<Edge<Generated>> => call('/answer', { question, sources });
 
 /** The entailment judge, pointed at the worker. Returns nulls when it cannot run. */
 export const judge: EntailmentJudge = ENDPOINT
