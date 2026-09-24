@@ -175,6 +175,68 @@ export const GOLDEN: GoldenQuestion[] = [
     note: 'HTML element names, which survive in the prose even though code examples were dropped.',
   },
 
+  {
+    id: 'sc-2-1-4',
+    question: 'What does Success Criterion 2.1.4 Character Key Shortcuts require?',
+    kind: 'identifier',
+    primary: [
+      { docId: 'wcag22', heading: 'Success Criterion 2.1.4' },
+      { docId: 'understanding/character-key-shortcuts', heading: 'In Brief' },
+    ],
+    related: [{ docId: 'understanding/character-key-shortcuts' }],
+  },
+  {
+    id: 'sc-2-5-7',
+    question: 'What does 2.5.7 Dragging Movements require?',
+    kind: 'identifier',
+    primary: [
+      { docId: 'wcag22', heading: 'Success Criterion 2.5.7' },
+      { docId: 'understanding/dragging-movements', heading: 'In Brief' },
+    ],
+    related: [{ docId: 'understanding/dragging-movements' }],
+  },
+  {
+    id: 'sc-3-2-6',
+    question: 'What does 3.2.6 Consistent Help require?',
+    kind: 'identifier',
+    primary: [
+      { docId: 'wcag22', heading: 'Success Criterion 3.2.6' },
+      { docId: 'understanding/consistent-help', heading: 'In Brief' },
+    ],
+    related: [{ docId: 'understanding/consistent-help' }],
+  },
+  {
+    id: 'sc-4-1-3',
+    question: 'What does 4.1.3 Status Messages require?',
+    kind: 'identifier',
+    primary: [
+      { docId: 'wcag22', heading: 'Success Criterion 4.1.3' },
+      { docId: 'understanding/status-messages', heading: 'In Brief' },
+    ],
+    related: [{ docId: 'understanding/status-messages' }],
+  },
+  {
+    id: 'sc-3-3-7',
+    question: 'What does 3.3.7 Redundant Entry require?',
+    kind: 'identifier',
+    primary: [
+      { docId: 'wcag22', heading: 'Success Criterion 3.3.7' },
+      { docId: 'understanding/redundant-entry', heading: 'In Brief' },
+    ],
+    related: [{ docId: 'understanding/redundant-entry' }],
+  },
+  {
+    id: 'sc-2-5-5',
+    question: 'What target size does 2.5.5 Target Size (Enhanced) ask for in CSS pixels?',
+    kind: 'identifier',
+    primary: [
+      { docId: 'wcag22', heading: 'Success Criterion 2.5.5' },
+      { docId: 'understanding/target-size-enhanced', heading: 'In Brief' },
+    ],
+    related: [{ docId: 'understanding/target-size-enhanced' }],
+    note: 'A number in the question and a number in the answer, with a near neighbour at 2.5.8.',
+  },
+
   // ── conceptual ────────────────────────────────────────────────────────────
   {
     id: 'large-text-contrast',
@@ -324,6 +386,79 @@ export const GOLDEN: GoldenQuestion[] = [
     ],
   },
 
+  {
+    id: 'hover-content-dismissible',
+    question: 'If extra content appears when hovering, how does someone get rid of it?',
+    kind: 'conceptual',
+    primary: [
+      { docId: 'understanding/content-on-hover-or-focus', heading: 'In Brief' },
+      { docId: 'understanding/content-on-hover-or-focus', heading: 'Dismissible' },
+    ],
+  },
+  {
+    id: 'focus-order-meaning',
+    question: 'Does the order in which things take focus have to match the reading order?',
+    kind: 'conceptual',
+    primary: [
+      { docId: 'understanding/focus-order', heading: 'In Brief' },
+      { docId: 'understanding/focus-order', heading: 'Intent' },
+    ],
+  },
+  {
+    id: 'error-suggestion',
+    question: 'When someone fills a field in wrongly, do they have to be told how to fix it?',
+    kind: 'conceptual',
+    primary: [
+      { docId: 'understanding/error-suggestion', heading: 'In Brief' },
+      { docId: 'understanding/error-suggestion', heading: 'Intent' },
+    ],
+  },
+  {
+    id: 'audio-autoplay',
+    question: 'What if sound starts playing by itself when a page opens?',
+    kind: 'conceptual',
+    primary: [
+      { docId: 'understanding/audio-control', heading: 'In Brief' },
+      { docId: 'understanding/audio-control', heading: 'Intent' },
+    ],
+  },
+  {
+    id: 'pointer-cancellation',
+    question: 'Should tapping do its thing as the finger goes down, or when it lifts?',
+    kind: 'conceptual',
+    primary: [
+      { docId: 'understanding/pointer-cancellation', heading: 'In Brief' },
+      { docId: 'understanding/pointer-cancellation', heading: 'Intent' },
+    ],
+  },
+  {
+    id: 'orientation-lock',
+    question: 'Can a page insist the phone is held upright?',
+    kind: 'conceptual',
+    primary: [
+      { docId: 'understanding/orientation', heading: 'In Brief' },
+      { docId: 'understanding/orientation', heading: 'Intent' },
+    ],
+  },
+  {
+    id: 'dragging-alternative',
+    question: 'If something is moved by dragging it, what else has to work?',
+    kind: 'conceptual',
+    primary: [
+      { docId: 'understanding/dragging-movements', heading: 'In Brief' },
+      { docId: 'understanding/dragging-movements', heading: 'Intent' },
+    ],
+  },
+  {
+    id: 'single-key-shortcuts',
+    question: 'What goes wrong when a shortcut is a single letter?',
+    kind: 'conceptual',
+    primary: [
+      { docId: 'understanding/character-key-shortcuts', heading: 'Intent' },
+      { docId: 'understanding/character-key-shortcuts', heading: 'In Brief' },
+    ],
+  },
+
   // ── design system ─────────────────────────────────────────────────────────
   {
     id: 'radios-vs-checkboxes',
@@ -368,6 +503,31 @@ export const GOLDEN: GoldenQuestion[] = [
     primary: [{ docId: 'govuk/components/skip-link', heading: 'Skip link' }],
   },
 
+  {
+    id: 'error-message-wording',
+    question: 'How should the error text next to a field be written?',
+    kind: 'design',
+    primary: [{ docId: 'govuk/components/error-message', heading: 'Error message' }],
+  },
+  {
+    id: 'character-count',
+    question: 'How do I tell someone they are running out of room in a text box?',
+    kind: 'design',
+    primary: [{ docId: 'govuk/components/character-count', heading: 'Character count' }],
+  },
+  {
+    id: 'accordion-when-not',
+    question: 'When is an accordion the wrong thing to reach for?',
+    kind: 'design',
+    primary: [{ docId: 'govuk/components/accordion', heading: 'Accordion' }],
+  },
+  {
+    id: 'service-wide-problem',
+    question: 'How do I tell users about a problem affecting the whole service?',
+    kind: 'design',
+    primary: [{ docId: 'govuk/components/notification-banner', heading: 'Notification banner' }],
+  },
+
   // ── refusal ───────────────────────────────────────────────────────────────
   {
     id: 'refusal-en301549',
@@ -403,5 +563,19 @@ export const GOLDEN: GoldenQuestion[] = [
     kind: 'refusal',
     primary: [],
     note: 'The corpus talks about focus constantly, and about React never.',
+  },
+  {
+    id: 'refusal-aria-spec',
+    question: 'What did ARIA 1.3 add to the braille attributes?',
+    kind: 'refusal',
+    primary: [],
+    note: 'The corpus cites ARIA constantly but contains none of its specification.',
+  },
+  {
+    id: 'refusal-lighthouse',
+    question: 'What Lighthouse accessibility score counts as a pass?',
+    kind: 'refusal',
+    primary: [],
+    note: 'A tooling question a reader might reasonably expect an accessibility corpus to answer.',
   },
 ];

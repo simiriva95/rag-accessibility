@@ -21,8 +21,8 @@ const chunk = (over: Partial<Chunk> = {}): Chunk => ({
 
 describe('the golden set', () => {
   it('has the questions it claims to have, with unique ids', () => {
-    expect(GOLDEN).toHaveLength(40);
-    expect(new Set(GOLDEN.map((q) => q.id)).size).toBe(40);
+    expect(GOLDEN).toHaveLength(60);
+    expect(new Set(GOLDEN.map((q) => q.id)).size).toBe(60);
   });
 
   it('covers every kind, refusals included', () => {
