@@ -210,15 +210,35 @@ describe('answer', () => {
     vi.unstubAllGlobals();
   });
 
+  it('reports every model that failed, not just the last', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: unknown) => {
+        const model = String(url).match(/models\/([^:]+):/)?.[1] ?? '?';
+        return model === 'busy'
+          ? new Response(JSON.stringify({ error: { message: 'high demand' } }), { status: 503 })
+          : new Response(JSON.stringify({ error: { message: 'no longer available' } }), { status: 404 });
+      }),
+    );
+
+    const result = await answer('q', candidates, { GEMINI_API_KEY: 'k', GEMINI_MODEL: 'busy, retired' });
+    const reason = 'degraded' in result ? result.degraded.reason : '';
+
+    // Naming only the last one blames a retired model for a congestion outage.
+    expect(reason).toMatch(/busy:.*high demand/);
+    expect(reason).toMatch(/retired:.*no longer available/);
+    vi.unstubAllGlobals();
+  }, 20_000);
+
   it('degrades rather than inventing when generation is unavailable', async () => {
     expect(await answer('q', candidates, {})).toEqual({
       degraded: { reason: 'no generation key configured' },
     });
 
     vi.stubGlobal('fetch', geminiReturning({}, false));
-    expect(await answer('q', candidates, { GEMINI_API_KEY: 'k' })).toEqual({
-      degraded: { reason: 'generation returned 500' },
-    });
+    const result = await answer('q', candidates, { GEMINI_API_KEY: 'k', GEMINI_MODEL: 'only' });
+    // The reason now names the model, because several may have been tried.
+    expect(result).toEqual({ degraded: { reason: 'only: generation returned 500' } });
     vi.unstubAllGlobals();
   });
 
@@ -329,6 +349,11 @@ describe('modelsOf', () => {
   it('offers more than one model by default', () => {
     // A free tier answers "high demand" on an ordinary afternoon.
     expect(modelsOf({}).length).toBeGreaterThan(1);
+  });
+
+  it('carries no model the provider has retired', () => {
+    // gemini-2.0-flash was in the chain until Google answered 404 for it.
+    expect(modelsOf({})).not.toContain('gemini-2.0-flash');
   });
 });
 

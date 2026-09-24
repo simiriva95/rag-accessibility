@@ -1088,6 +1088,16 @@ modo chiunque abbia risposto.**
 Un bug scritto e corretto nello stesso momento: `[] || DEFAULT_MODELS` restituisce `[]`, perché un
 array vuoto è *truthy*. Senza configurazione non avrebbe provato nessun modello.
 
+E due difetti emersi provando la catena sul campo:
+
+**La catena conteneva un modello ritirato.** Google ha risposto `404 — gemini-2.0-flash is no
+longer available`. Una catena di ripiego va verificata come qualunque altra dipendenza: un modello
+morto in fondo non è un ripiego, è un ritardo.
+
+**Riportavo solo l'ultimo errore.** Con i primi due modelli congestionati e il terzo ritirato, il
+banner incolpava il modello ritirato — mandando chi legge a cercare esattamente la cosa sbagliata.
+Ora nomina ogni modello con la propria ragione.
+
 ### Il 522 transitorio
 
 Subito dopo il deploy, `vectors.bin` rispondeva 522. Tre tentativi dopo: 200, 617.708 byte in

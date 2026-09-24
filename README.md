@@ -195,6 +195,11 @@ asked again.
 A worse model is still a worse answer, not a wrong one: the verification layer judges whichever
 model replied by exactly the same rule.
 
+When every model in the chain fails, the banner names each one with its own reason. An earlier
+version reported only the last failure, which blamed a retired model for an outage whose actual
+cause was the first two being busy — the sort of message that sends a reader after the wrong
+thing entirely.
+
 ---
 
 ## The ablation

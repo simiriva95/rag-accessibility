@@ -67,7 +67,7 @@ export type Env = {
  * uncongested. The fallback is smaller and faster; a worse answer beats no
  * answer, and the verification layer judges either the same way.
  */
-const DEFAULT_MODELS = ['gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-2.0-flash'];
+const DEFAULT_MODELS = ['gemini-3.6-flash', 'gemini-2.5-flash', 'gemini-2.5-flash-lite'];
 
 export function modelsOf(env: Env): string[] {
   const configured = (env.GEMINI_MODEL ?? '')
@@ -247,7 +247,7 @@ async function generateWith(
   key: string,
   body: (model: string) => unknown,
 ): Promise<{ response: Response; model: string } | { failed: string }> {
-  let last = 'no model was tried';
+  const failures: string[] = [];
 
   for (const model of modelsOf(env)) {
     for (let attempt = 0; attempt < 3; attempt++) {
@@ -263,14 +263,17 @@ async function generateWith(
       if (response.ok) return { response, model };
 
       const busy = response.status === 429 || response.status === 503;
-      last = await upstreamError(response, 'generation');
+      if (attempt === 0 || !busy) failures.push(`${model}: ${await upstreamError(response, 'generation')}`);
       if (!busy) break; // a real refusal: try the next model rather than repeat
 
       if (attempt < 2) await new Promise((r) => setTimeout(r, 2 ** attempt * 800));
     }
   }
 
-  return { failed: last };
+  // Every model's own reason, not just the last one's. Reporting only the last
+  // blamed a retired model for an outage whose actual cause was the first two
+  // being busy — which sends whoever reads it after entirely the wrong thing.
+  return { failed: failures.join(' · ') || 'no model was tried' };
 }
 
 /**
