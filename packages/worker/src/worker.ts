@@ -312,15 +312,24 @@ async function generateWith(
   env: Env,
   request: Structured,
   models: string[] = modelsOf(env),
+  /** A reason to reject an otherwise well-formed reply and ask the next model. */
+  reject: (text: string) => string | undefined = () => undefined,
 ): Promise<{ text: string; model: string } | { failed: string }> {
   const failures: string[] = [];
+  const accept = (model: string, text: string) => {
+    const problem = reject(text);
+    if (problem) failures.push(`${model}: ${problem}`);
+    return problem ? undefined : { text, model };
+  };
   const key = apiKey(env);
 
   for (const model of models) {
     if (isWorkersAi(model)) {
       const result = await workersAi(env, model, request);
-      if ('text' in result) return { text: result.text, model };
-      failures.push(`${model}: ${result.failed}`);
+      if ('text' in result) {
+        const accepted = accept(model, result.text);
+        if (accepted) return accepted;
+      } else failures.push(`${model}: ${result.failed}`);
       continue;
     }
 
@@ -352,8 +361,10 @@ async function generateWith(
           candidates?: { content?: { parts?: { text?: string }[] } }[];
         };
         const text = body.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (text) return { text, model };
-        failures.push(`${model}: generation returned no content`);
+        if (text) {
+          const accepted = accept(model, text);
+          if (accepted) return accepted;
+        } else failures.push(`${model}: generation returned no content`);
         break;
       }
 
@@ -461,8 +472,8 @@ const sourceBlock = (sources: Chunkish[]) =>
 
 /** Repeated after the question, where a model is likeliest to act on it. */
 const REMINDER: Record<AnswerLanguage, string> = {
-  en: 'Remember: every WCAG threshold with its level and criterion, as in "(Level AA, 1.4.3)". The level is in the source title.',
-  it: 'Ricorda: ogni soglia WCAG con il suo livello e il criterio, come "(Livello AA, 1.4.3)". Il livello è nel titolo della fonte. Frasi in italiano, citazioni in inglese copiate esattamente.',
+  en: 'Remember: every WCAG threshold with its level and criterion, as in "(Level AA, 1.4.3)"; the level is in the source title. Naming the criterion in the sentence does not replace the claim: every factual sentence still needs its entry in "claims", with a quote copied exactly from the source text.',
+  it: 'Ricorda: ogni soglia WCAG con il suo livello e il criterio, come "(Livello AA, 1.4.3)"; il livello è nel titolo della fonte. Nominare il criterio nella frase non sostituisce la citazione: ogni frase fattuale deve comunque avere la sua voce in "claims", con un "quote" in inglese copiato esattamente dal testo della fonte.',
 };
 
 /** `model` names whichever model in the chain actually answered, so the UI can say which one did. */
@@ -476,6 +487,24 @@ export type AnswerResult = (ParsedAnswer & { model: string }) | { degraded: { re
  * is still an app. So a failure here returns a reason, never a fabricated
  * answer and never an empty one dressed up as a refusal.
  */
+/**
+ * An answer that states things and cites none of them is not an answer this
+ * site can show: every sentence would read "uncited". Llama 4 Scout was seen
+ * doing exactly that, so such a reply is refused and the next model asked.
+ * A refusal (answerable: false) needs no claims and is accepted as it is.
+ */
+function uncited(text: string): string | undefined {
+  try {
+    const raw = JSON.parse(text) as { answerable?: unknown; claims?: unknown };
+    if (raw.answerable === true && Array.isArray(raw.claims) && raw.claims.length === 0) {
+      return 'answered without citing anything';
+    }
+  } catch {
+    return undefined; // Unparseable output is the parser's to report, with its own reason.
+  }
+  return undefined;
+}
+
 /**
  * The language the answer's sentences are written in. The quotes never
  * follow it: they are checked character for character against the English
@@ -499,7 +528,7 @@ export async function answer(
       system: SYSTEM_PROMPT + LANGUAGE_RULE[language],
       user: `${sourceBlock(sources)}\n\nQuestion: ${question}\n\n${REMINDER[language]}`,
       schema: ANSWER_SCHEMA,
-    });
+    }, modelsOf(env), uncited);
 
     if ('failed' in attempt) return { degraded: { reason: attempt.failed } };
     return { ...parseModelAnswer(JSON.parse(attempt.text)), model: attempt.model };

@@ -279,6 +279,19 @@ describe('answer', () => {
     vi.unstubAllGlobals();
   });
 
+  it('refuses an answer that cites nothing, and asks the next model', async () => {
+    const asked: string[] = [];
+    const AI: Ai = {
+      run: async (model) => {
+        asked.push(model);
+        return { response: model === '@cf/first' ? { answerable: true, sentences: ['A claim.'], claims: [] } : payload };
+      },
+    };
+    const result = await answer('q', candidates, { GEMINI_MODEL: '@cf/first, @cf/second', AI });
+    expect(asked).toEqual(['@cf/first', '@cf/second']);
+    expect('answer' in result && result.model).toBe('@cf/second');
+  });
+
   it('runs on Workers AI alone when no Gemini key is configured', async () => {
     const AI = aiReturning({ response: JSON.stringify(payload) });
     const result = await answer('q', candidates, { GEMINI_MODEL: '@cf/meta/llama', AI });
