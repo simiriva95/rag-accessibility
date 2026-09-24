@@ -318,9 +318,15 @@ async function generateWith(
         break;
       }
 
-      const busy = response.status === 429 || response.status === 503;
-      if (attempt === 0 || !busy) failures.push(`${model}: ${await upstreamError(response, 'generation')}`);
-      if (!busy) break; // a real refusal: try the next model rather than repeat
+      const reason = await upstreamError(response, 'generation');
+      // 429 covers two different things. "High demand" passes in seconds and
+      // is worth a retry; "exceeded your current quota" is the daily free tier
+      // and will not change before the person waiting gives up. Retrying that
+      // one cost about fifteen seconds per question for nothing.
+      const exhausted = /quota/i.test(reason);
+      const busy = (response.status === 429 || response.status === 503) && !exhausted;
+      if (attempt === 0 || !busy) failures.push(`${model}: ${reason}`);
+      if (!busy) break; // a refusal that will not change: try the next model
 
       if (attempt < 2) await new Promise((r) => setTimeout(r, 2 ** attempt * 800));
     }

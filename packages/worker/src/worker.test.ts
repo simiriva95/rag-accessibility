@@ -196,6 +196,19 @@ describe('answer', () => {
     vi.unstubAllGlobals();
   }, 20_000);
 
+  it('does not retry an exhausted daily quota, which a few seconds will not fix', async () => {
+    const fetchMock = vi.fn(
+      async () =>
+        new Response(JSON.stringify({ error: { message: 'You exceeded your current quota' } }), { status: 429 }),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    await answer('q', candidates, { GEMINI_API_KEY: 'k', GEMINI_MODEL: 'one, two' });
+
+    expect(fetchMock).toHaveBeenCalledTimes(2); // once per model, no retries
+    vi.unstubAllGlobals();
+  });
+
   it('does not retry a refusal that will not change', async () => {
     const fetchMock = vi.fn(
       async () => new Response(JSON.stringify({ error: { message: 'API key not valid' } }), { status: 400 }),
