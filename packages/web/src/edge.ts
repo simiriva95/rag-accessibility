@@ -30,7 +30,7 @@ async function call<T>(path: string, body: unknown): Promise<Edge<T>> {
       body: JSON.stringify(body),
     });
 
-    if (response.status === 429) return { degraded: { reason: 'rate limited — try again in a moment' } };
+    if (response.status === 429) return { degraded: { reason: 'rate limited, try again in a moment' } };
     if (!response.ok) return { degraded: { reason: `${path} returned ${response.status}` } };
 
     return { ok: (await response.json()) as T };

@@ -89,21 +89,21 @@ export function SourceDialog({ target, onClose }: { target?: SourceTarget; onClo
       // so a constant aria-labelledby points at an id that does not exist for
       // as long as the dialog is closed.
       {...(target ? { 'aria-labelledby': 'source-title' } : {})}
-      className="m-auto flex max-h-[85dvh] w-[min(56rem,92vw)] flex-col overflow-hidden rounded-lg bg-white p-0 text-slate-900 backdrop:bg-slate-900/60 dark:bg-slate-900 dark:text-slate-100"
+      className="m-auto flex max-h-[85dvh] w-[min(56rem,92vw)] flex-col overflow-hidden rounded-2xl border border-line bg-paper p-0 text-ink backdrop:bg-zinc-950/60"
     >
       {target && (
         <>
-          <div className="flex shrink-0 items-start gap-4 border-b border-slate-200 px-5 py-4 dark:border-slate-800">
+          <div className="flex shrink-0 items-start gap-4 border-b border-line px-5 py-4">
             <div className="min-w-0">
               <h2 id="source-title" className="font-semibold">
                 {target.chunk.docTitle}
               </h2>
-              <p className="mt-1 truncate text-sm text-slate-600 dark:text-slate-400">
+              <p className="mt-1 truncate text-sm text-ink-2">
                 {target.chunk.headingPath.join(' › ')}
               </p>
               {span && (
-                <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-                  Highlighted characters {span.start.toLocaleString('en-GB')}–
+                <p className="mt-1 text-sm text-ink-2">
+                  Highlighted characters {span.start.toLocaleString('en-GB')}-
                   {span.end.toLocaleString('en-GB')} of the normalized document.
                 </p>
               )}
@@ -111,7 +111,7 @@ export function SourceDialog({ target, onClose }: { target?: SourceTarget; onClo
             <button
               type="button"
               onClick={onClose}
-              className="ml-auto shrink-0 rounded border border-slate-300 px-3 py-1.5 text-sm dark:border-slate-700"
+              className="ml-auto shrink-0 rounded-lg border border-line-strong px-3 py-1.5 text-sm"
             >
               Close
             </button>
@@ -121,12 +121,12 @@ export function SourceDialog({ target, onClose }: { target?: SourceTarget; onClo
             {error && <p role="alert">{error}</p>}
 
             {!error && text === undefined && (
-              <p className="text-slate-600 dark:text-slate-400">Loading the source document…</p>
+              <p className="text-ink-2">Loading the source document…</p>
             )}
 
             {text !== undefined && (
               <>
-                <p className="mb-4 text-sm text-slate-600 dark:text-slate-400">
+                <p className="mb-4 text-sm text-ink-2">
                   This is the normalized text the offsets are measured against, shown unaltered.{' '}
                   <a href={target.chunk.sourceUrl} className="underline underline-offset-2" rel="noreferrer">
                     Original document
@@ -141,7 +141,7 @@ export function SourceDialog({ target, onClose }: { target?: SourceTarget; onClo
                         // No outline: a highlight spanning several lines draws
                         // one box per line fragment, which reads as several
                         // separate marks rather than one continuous passage.
-                        className="rounded-sm bg-yellow-200 font-medium text-slate-900"
+                        className="rounded-sm bg-yellow-200 font-medium text-zinc-900"
                       >
                         {text.slice(span.start, span.end)}
                       </mark>

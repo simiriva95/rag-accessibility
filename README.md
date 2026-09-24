@@ -46,6 +46,25 @@ A stage that could not run keeps its column and says why, rather than vanishing.
 
 ---
 
+## How it works, with your question's own numbers
+
+A third view walks through the seven stages a question just went through, and every figure in it
+is read off that run: the tokens and how many chunks contain each, the BM25 sum for the top result
+broken down term by term (tested to add up to the score it ranked with), the 384 numbers of the
+query embedding, each fused candidate's RRF score split into its dense and BM25 votes, the
+reranker's movement as a slope chart, the model that answered and its raw JSON, and what each
+verification check found per claim.
+
+Below the walkthrough sit the reference sections: the six techniques the system composes, each
+with its definition, cost here, failure modes, measured performance and the paper it comes from;
+the metrics and the ablation as charts; the system design; and the design system itself.
+
+Every chart is hand-built HTML and SVG, hidden from assistive technology over a real table one
+click away, and grows from its baseline once per question. The view loads on demand, so it adds
+nothing to first paint. axe-core reports no violations on it, light and dark, desktop and phone.
+
+---
+
 ## What it costs to load
 
 Measured on the deployed demo, not locally.

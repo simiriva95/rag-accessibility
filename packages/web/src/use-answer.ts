@@ -25,6 +25,8 @@ export type Answered = {
   sources: Chunk[];
   /** Which model in the chain answered, when the worker reports it. */
   model?: string;
+  /** Wall-clock, as the browser saw it: generation includes the worker's retries. */
+  timings: { generate: number; verify: number };
 };
 
 export type AnswerState =
@@ -65,6 +67,7 @@ export function useAnswer(retrieval: Retrieval): AnswerState {
     setState({ phase: 'generating' });
 
     void (async () => {
+      const started = performance.now();
       const response = await generate(
         run.query,
         sources.map(({ id: chunkId, text: body }) => ({ id: chunkId, text: body })),
@@ -79,6 +82,7 @@ export function useAnswer(retrieval: Retrieval): AnswerState {
         return setState({ phase: 'unavailable', reason: payload.degraded.reason });
       }
 
+      const generated = performance.now();
       setState({ phase: 'verifying', answer: payload.answer });
 
       // Verified against the very chunks handed to the generator, so a citation
@@ -95,6 +99,7 @@ export function useAnswer(retrieval: Retrieval): AnswerState {
           dropped: payload.dropped,
           sources,
           ...(payload.model ? { model: payload.model } : {}),
+          timings: { generate: generated - started, verify: performance.now() - generated },
         },
       });
     })();

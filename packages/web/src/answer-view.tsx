@@ -44,7 +44,7 @@ export function AnswerView({ retrieval, state }: { retrieval: Retrieval; state: 
 
   if (!retrieval.run) {
     return (
-      <p className="mt-6 text-slate-600 dark:text-slate-400">
+      <p className="mt-6 text-ink-2">
         Ask a question to see an answer with every citation checked.
       </p>
     );
@@ -58,10 +58,10 @@ export function AnswerView({ retrieval, state }: { retrieval: Retrieval; state: 
       {state.phase === 'verifying' && <Working>Checking each quote against the text it cites…</Working>}
 
       {state.phase === 'unavailable' && (
-        <div className="rounded-md border border-amber-600 px-3 py-2 text-sm">
+        <div className="rounded-xl border border-partial px-3 py-2 text-sm">
           <h2 className="font-medium">No written answer</h2>
-          <p className="mt-1 text-slate-700 dark:text-slate-300">{state.reason}</p>
-          <p className="mt-2 text-slate-600 dark:text-slate-400">
+          <p className="mt-1 text-ink-2">{state.reason}</p>
+          <p className="mt-2 text-ink-2">
             The retrieved sources are below. Retrieval is most of the value here, so the app keeps
             working without generation rather than showing nothing.
           </p>
@@ -81,7 +81,7 @@ export function AnswerView({ retrieval, state }: { retrieval: Retrieval; state: 
 }
 
 const Working = ({ children }: { children: string }) => (
-  <p className="text-slate-600 dark:text-slate-400">{children}</p>
+  <p className="text-ink-2">{children}</p>
 );
 
 function retrievedChunks(retrieval: Retrieval): Chunk[] {
@@ -105,7 +105,7 @@ function Answer({ result, onInspect }: { result: Answered; onInspect: (target: S
           No answer in these sources
         </h2>
         <p className="mt-2 max-w-2xl">{answer.sentences.join(' ')}</p>
-        <p className="mt-2 max-w-2xl text-sm text-slate-600 dark:text-slate-400">
+        <p className="mt-2 max-w-2xl text-sm text-ink-2">
           Declining is a correct answer. The corpus is WCAG 2.2 and the GOV.UK Design System, and
           nothing outside it was consulted.
         </p>
@@ -138,7 +138,7 @@ function Answer({ result, onInspect }: { result: Answered; onInspect: (target: S
           <summary className="cursor-pointer">
             {dropped.length} malformed {dropped.length === 1 ? 'claim was' : 'claims were'} discarded
           </summary>
-          <ul className="mt-2 list-disc space-y-0.5 pl-5 text-slate-600 dark:text-slate-400">
+          <ul className="mt-2 list-disc space-y-0.5 pl-5 text-ink-2">
             {dropped.map((reason) => (
               <li key={reason}>{reason}</li>
             ))}
@@ -184,10 +184,9 @@ function Sentence({
         <span aria-hidden="true" className="mr-0.5 font-semibold">
           {mark}
         </span>
-        <span className="text-slate-900 dark:text-slate-100">{sentence}</span>
+        <span className="text-ink">{sentence}</span>
         <span className="sr-only">
-          {' '}
-          — {label}
+          , {label}
           {openable ? '. Select to open the source.' : ''}
         </span>
       </button>{' '}
@@ -214,7 +213,7 @@ function Legend({ claims, sentences }: { claims: VerifiedClaim[]; sentences: str
             </span>
             {status}
           </dt>
-          <dd className="tabular-nums text-slate-600 dark:text-slate-400">
+          <dd className="tabular-nums text-ink-2">
             {count} {count === 1 ? 'sentence' : 'sentences'}
           </dd>
         </div>
@@ -239,21 +238,21 @@ function Evidence({
       </h2>
       <ol className="mt-3 space-y-3">
         {chunks.map((chunk, index) => (
-          <li key={chunk.id} className="rounded-md border border-slate-200 p-4 dark:border-slate-800">
-            <p className="text-sm text-slate-500 dark:text-slate-400">
+          <li key={chunk.id} className="rounded-xl border border-line p-4">
+            <p className="text-sm text-muted">
               <span className="tabular-nums">{index + 1}.</span> {chunk.docTitle}
               {chunk.scRef && <> · SC {chunk.scRef}</>}
             </p>
             <h3 className="mt-1 font-medium">{chunk.headingPath.at(-1) ?? chunk.docTitle}</h3>
             {chunk.text && (
-              <p className="mt-2 line-clamp-3 text-sm text-slate-700 dark:text-slate-300">
+              <p className="mt-2 line-clamp-3 text-sm text-ink-2">
                 {chunk.text
                   .split('\n\n')
                   .filter((block) => !block.startsWith('#'))
                   .join(' ')}
               </p>
             )}
-            <p className="mt-2 flex flex-wrap gap-x-4 text-sm">
+            <p className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm">
               <button
                 type="button"
                 onClick={() =>
@@ -262,11 +261,11 @@ function Evidence({
                   // normalized text a citation would use.
                   onInspect({ chunk, span: { start: chunk.charStart, end: chunk.charEnd } })
                 }
-                className="underline underline-offset-2"
+                className="py-1 underline underline-offset-2"
               >
                 Show this passage in the source
               </button>
-              <a href={chunk.sourceUrl} className="underline underline-offset-2" rel="noreferrer">
+              <a href={chunk.sourceUrl} className="py-1 underline underline-offset-2" rel="noreferrer">
                 {chunk.docId}
               </a>
             </p>

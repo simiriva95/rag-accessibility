@@ -41,7 +41,7 @@ export function RetrievalDebugger({ retrieval }: { retrieval: Retrieval }) {
 
   if (!run) {
     return (
-      <p className="mt-6 text-slate-600 dark:text-slate-400">
+      <p className="mt-6 text-ink-2">
         Ask a question to see how the candidates are retrieved, fused and reranked.
       </p>
     );
@@ -52,16 +52,16 @@ export function RetrievalDebugger({ retrieval }: { retrieval: Retrieval }) {
   return (
     <div className="mt-6" onKeyDown={(event) => event.key === 'Escape' && setSelected(undefined)}>
       <h2 className="sr-only">Retrieval stages</h2>
-      <p className="max-w-3xl text-sm text-slate-600 dark:text-slate-400">
+      <p className="max-w-3xl text-sm text-ink-2">
         Each column is a stage, in the order it runs. The scores are shown in their own units and
-        are never put on a common scale — that is why fusion reads the ordering rather than the
+        are never put on a common scale. That is why fusion reads the ordering rather than the
         numbers.
       </p>
 
       <Columns columns={columns} meta={meta} selected={selected} onSelect={setSelected} />
 
-      <p className="mt-3 text-sm text-slate-600 dark:text-slate-400">
-        <span className="font-medium text-slate-900 dark:text-slate-100">
+      <p className="mt-3 text-sm text-ink-2">
+        <span className="font-medium text-ink">
           {Math.round(run.timings.total)} ms
         </span>{' '}
         end to end
@@ -110,7 +110,7 @@ function buildColumns(run: Run): Column[] {
       unit: 'cross-encoder',
       hits: run.final,
       ...(run.timings.rerank !== undefined ? { ms: run.timings.rerank } : {}),
-      ...(reasonFor('rerank') ? { missing: `${reasonFor('rerank')} — showing the fused order` } : {}),
+      ...(reasonFor('rerank') ? { missing: `${reasonFor('rerank')}, showing the fused order` } : {}),
     },
   ];
 }
@@ -185,22 +185,22 @@ function ColumnView({
     <section aria-labelledby={headingId}>
       <h3 id={headingId} className="flex flex-wrap items-baseline gap-x-2 text-sm font-semibold">
         {column.title}
-        <span className="font-normal text-slate-500 dark:text-slate-400">{column.unit}</span>
+        <span className="font-normal text-muted">{column.unit}</span>
         {column.ms !== undefined && (
-          <span className="ml-auto font-normal tabular-nums text-slate-500 dark:text-slate-400">
+          <span className="ml-auto font-normal tabular-nums text-muted">
             {column.ms < 10 ? column.ms.toFixed(1) : Math.round(column.ms)} ms
           </span>
         )}
       </h3>
 
       {column.missing && (
-        <p className="mt-2 rounded border border-amber-600 px-2 py-1 text-xs text-slate-700 dark:text-slate-300">
+        <p className="mt-2 rounded-lg border border-partial px-2 py-1 text-xs text-ink-2">
           {column.missing}
         </p>
       )}
 
       {column.hits.length === 0 ? (
-        !column.missing && <p className="mt-2 text-xs text-slate-500">No candidates.</p>
+        !column.missing && <p className="mt-2 text-xs text-muted">No candidates.</p>
       ) : (
         <ol className="mt-2 space-y-1">
           {column.hits.slice(0, SHOWN).map((hit, index) => {
@@ -213,23 +213,23 @@ function ColumnView({
                   type="button"
                   onClick={() => onSelect(selected === hit.chunkId ? undefined : hit.chunkId)}
                   aria-pressed={selected === hit.chunkId}
-                  className={`w-full rounded border px-2 py-1.5 text-left text-xs ${
+                  className={`w-full rounded-lg border px-2.5 py-1.5 text-left text-xs ${
                     selected === hit.chunkId
-                      ? 'border-slate-900 bg-slate-100 dark:border-slate-100 dark:bg-slate-800'
-                      : 'border-slate-200 hover:border-slate-400 dark:border-slate-800 dark:hover:border-slate-600'
+                      ? 'border-ink bg-raised'
+                      : 'border-line hover:border-line-strong'
                   }`}
                 >
                   <span className="flex items-baseline gap-1.5">
-                    <span className="tabular-nums text-slate-500 dark:text-slate-400">{index + 1}</span>
+                    <span className="tabular-nums text-muted">{index + 1}</span>
                     <span className="min-w-0 flex-1 truncate font-medium">
                       {chunk?.headingPath.at(-1) ?? hit.chunkId}
                     </span>
-                    <span className="tabular-nums text-slate-500 dark:text-slate-400">
+                    <span className="tabular-nums text-muted">
                       {hit.score.toFixed(3)}
                     </span>
                   </span>
-                  <span className="mt-0.5 flex items-baseline gap-1.5 text-slate-500 dark:text-slate-400">
-                    <span className="min-w-0 flex-1 truncate">{chunk?.docId ?? '—'}</span>
+                  <span className="mt-0.5 flex items-baseline gap-1.5 text-muted">
+                    <span className="min-w-0 flex-1 truncate">{chunk?.docId ?? 'unknown'}</span>
                     {from !== undefined && <RankDelta from={from} to={index} />}
                   </span>
                 </button>
@@ -347,10 +347,10 @@ function Connectors({
           className={
             'connector ' +
             (path.moved > 0
-              ? 'stroke-emerald-600/70'
+              ? 'stroke-hybrid'
               : path.moved < 0
-                ? 'stroke-amber-600/70'
-                : 'stroke-slate-400/50')
+                ? 'stroke-rerank'
+                : 'stroke-line-strong')
           }
         />
       ))}
@@ -369,7 +369,7 @@ function Detail({
 }) {
   if (!selected) {
     return (
-      <p className="mt-4 text-sm text-slate-500 dark:text-slate-400">
+      <p className="mt-4 text-sm text-muted">
         Select a candidate to see where every stage ranked it.
       </p>
     );
@@ -390,21 +390,21 @@ function Detail({
   ];
 
   return (
-    <div className="mt-4 rounded-md border border-slate-200 p-4 dark:border-slate-800">
+    <div className="mt-4 rounded-xl border border-line p-4">
       <h3 className="font-medium">{chunk?.headingPath.join(' › ') ?? selected}</h3>
       <dl className="mt-3 flex flex-wrap gap-x-6 gap-y-1 text-sm">
         {places.map((place) => (
           <div key={place.label} className="flex gap-1.5">
-            <dt className="text-slate-500 dark:text-slate-400">{place.label}</dt>
+            <dt className="text-muted">{place.label}</dt>
             <dd className="tabular-nums">{place.rank === undefined ? 'not retrieved' : `#${place.rank}`}</dd>
           </div>
         ))}
       </dl>
       {chunk && (
-        <p className="mt-3 text-sm text-slate-600 dark:text-slate-400">
+        <p className="mt-3 text-sm text-ink-2">
           {chunk.docId}
           {chunk.scRef && ` · SC ${chunk.scRef}`} · {chunk.tokenCount} tokens · characters{' '}
-          {chunk.charStart.toLocaleString('en-GB')}–{chunk.charEnd.toLocaleString('en-GB')}
+          {chunk.charStart.toLocaleString('en-GB')}-{chunk.charEnd.toLocaleString('en-GB')}
         </p>
       )}
     </div>

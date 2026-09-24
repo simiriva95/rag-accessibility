@@ -1,4 +1,35 @@
 @import 'tailwindcss';
+@import '@fontsource-variable/geist';
+@import '@fontsource-variable/geist-mono';
+
+/*
+ * The design system, as tokens. One cool neutral family (zinc), no brand
+ * accent: ink is the accent, so the only colour on the page is colour that
+ * means something — a citation state, or a retriever in a chart.
+ *
+ * Series colours follow the entity, never its rank: Dense is always slot 1,
+ * BM25 slot 2, Hybrid slot 3, Rerank slot 4, in every chart on the page.
+ * Validated as a set (dataviz validate_palette.js), both modes. Two light
+ * steps sit under 3:1 on the surface, so every chart carries direct labels and
+ * a table view — the relief the validator requires.
+ */
+@theme {
+  --font-sans: 'Geist Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'Geist Mono Variable', ui-monospace, monospace;
+
+  --color-paper: #fafafa;
+  --color-raised: #f4f4f5;
+  --color-ink: #18181b;
+  --color-ink-2: #52525b;
+  --color-muted: #6b6b73;
+  --color-line: #e4e4e7;
+  --color-line-strong: #a1a1aa;
+
+  --color-dense: #2a78d6;
+  --color-lexical: #eb6834;
+  --color-hybrid: #1baf7a;
+  --color-rerank: #eda100;
+}
 
 /*
  * Citation states. The symbol and the underline style carry the meaning; these
@@ -18,6 +49,19 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
+    --color-paper: #0b0b0d;
+    --color-raised: #17171a;
+    --color-ink: #f4f4f5;
+    --color-ink-2: #b4b4bc;
+    --color-muted: #9a9aa3;
+    --color-line: #27272a;
+    --color-line-strong: #52525b;
+
+    --color-dense: #3987e5;
+    --color-lexical: #d95926;
+    --color-hybrid: #199e70;
+    --color-rerank: #c98500;
+
     --color-verified: oklch(0.78 0.15 155);
     --color-partial: oklch(0.82 0.14 85);
     --color-unsupported: oklch(0.72 0.17 25);
@@ -31,15 +75,11 @@
  * the browser default, which is white behind a dark page.
  */
 body {
-  background-color: var(--color-white);
-  color: var(--color-slate-900);
-}
-
-@media (prefers-color-scheme: dark) {
-  body {
-    background-color: var(--color-slate-950);
-    color: var(--color-slate-100);
-  }
+  background-color: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-feature-settings: 'ss01', 'cv11';
+  -webkit-font-smoothing: antialiased;
 }
 
 /*
@@ -84,8 +124,89 @@ dialog:not([open]) {
   animation: draw-connector 600ms ease-out;
 }
 
+/*
+ * Charts grow from their baseline once, when they scroll into view — the
+ * motion says "this is being measured", then gets out of the way. Only
+ * transform and opacity move. `.viz-in` is set by useInView.
+ */
+.grow-x {
+  transform-box: fill-box;
+  transform-origin: left center;
+  transform: scaleX(0);
+}
+.grow-y {
+  transform-box: fill-box;
+  transform-origin: center bottom;
+  transform: scaleY(0);
+}
+.fade-up {
+  opacity: 0;
+}
+.viz-in .grow-x,
+.viz-in .grow-y,
+.viz-in .fade-up {
+  transform: none;
+  opacity: 1;
+  animation: 900ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: calc(var(--i, 0) * 45ms);
+}
+.viz-in .grow-x {
+  animation-name: grow-x;
+}
+.viz-in .grow-y {
+  animation-name: grow-y;
+}
+.viz-in .fade-up {
+  animation-name: fade-up;
+}
+@keyframes grow-x {
+  from {
+    transform: scaleX(0);
+  }
+}
+@keyframes grow-y {
+  from {
+    transform: scaleY(0);
+  }
+}
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}
+.viz-in .draw {
+  animation: draw-connector 1100ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: calc(var(--i, 0) * 70ms);
+}
+.draw {
+  stroke-dasharray: 1;
+}
+
+/* A request in flight: the one perpetual motion on the page, and only while something runs. */
+@keyframes flow {
+  to {
+    stroke-dashoffset: -12;
+  }
+}
+.flowing {
+  stroke-dasharray: 4 8;
+  animation: flow 700ms linear infinite;
+}
+
 /* The debugger's movement is decoration. Without it nothing is lost. */
 @media (prefers-reduced-motion: reduce) {
+  .grow-x,
+  .grow-y,
+  .fade-up,
+  .draw {
+    transform: none !important;
+    opacity: 1 !important;
+    animation-delay: 0s !important;
+  }
+  .flowing {
+    animation: none;
+  }
   *,
   *::before,
   *::after {

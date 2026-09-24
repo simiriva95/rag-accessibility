@@ -1,8 +1,8 @@
-import { useEffect, useId, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useId, useRef, useState } from 'react';
 import { AnswerView } from './answer-view.tsx';
 import { RetrievalDebugger } from './debugger.tsx';
-import { Explain } from './explain.tsx';
 import { Tabs } from './tabs.tsx';
+import { PipelineFigure } from './pipeline-figure.tsx';
 import { useAnswer } from './use-answer.ts';
 import { useRetrieval, type DegradedStage, type Retrieval, type Run } from './use-retrieval.ts';
 
@@ -21,18 +21,32 @@ export function App() {
   const [query, setQuery] = useState('');
   const inputId = useId();
   const announcement = useAnnouncement(retrieval);
-  const [view, setView] = useState<'results' | 'retrieval' | 'explain'>('results');
+  const [view, setView] = useState<View>('results');
 
   const submit = (value: string) => {
     setQuery(value);
     retrieval.ask(value);
   };
 
+  /** The nav jumps to a section of the walkthrough, which lives in its own tab. */
+  const jump = (id: string) => (event: React.MouseEvent) => {
+    event.preventDefault();
+    setView('explain');
+    // The panel may still be loading its code, so wait for the target to exist.
+    const started = performance.now();
+    const scroll = () => {
+      const target = document.getElementById(id);
+      if (target) target.scrollIntoView({ block: 'start' });
+      else if (performance.now() - started < 3000) requestAnimationFrame(scroll);
+    };
+    requestAnimationFrame(scroll);
+  };
+
   return (
-    <div className="min-h-dvh bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+    <div className="min-h-dvh bg-paper text-ink">
       <a
         href="#results"
-        className="sr-only focus:not-sr-only focus:absolute focus:m-3 focus:rounded focus:bg-slate-900 focus:px-3 focus:py-2 focus:text-white dark:focus:bg-white dark:focus:text-slate-900"
+        className="sr-only focus:not-sr-only focus:absolute focus:m-3 focus:rounded-lg focus:bg-ink focus:px-3 focus:py-2 focus:text-paper"
       >
         Skip to results
       </a>
@@ -41,94 +55,143 @@ export function App() {
         {announcement}
       </p>
 
-      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
-        <header>
-          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-            Hybrid retrieval, verified citations
-          </h1>
-          <p className="mt-2 max-w-2xl text-slate-600 dark:text-slate-400">
-            Questions about WCAG 2.2 and the GOV.UK Design System. The retrieval is shown as it
-            happens, and every quoted claim is checked against the text it cites.
-          </p>
-        </header>
-
-        <main className="mt-8">
-          <form
-            onSubmit={(event) => {
-              event.preventDefault();
-              submit(query);
-            }}
-          >
-            <label htmlFor={inputId} className="block text-sm font-medium">
-              Your question
-            </label>
-            <div className="mt-2 flex gap-2">
-              <input
-                id={inputId}
-                type="search"
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                disabled={retrieval.status !== 'ready'}
-                placeholder="How much colour contrast does large text need?"
-                className="min-w-0 flex-1 rounded-md border border-slate-400 bg-white px-3 py-2 text-slate-900 placeholder:text-slate-500 disabled:opacity-60 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
-              />
-              <button
-                type="submit"
-                disabled={retrieval.status !== 'ready' || retrieval.running}
-                className="rounded-md bg-slate-900 px-4 py-2 font-medium text-white disabled:opacity-60 dark:bg-slate-100 dark:text-slate-900"
-              >
-                {retrieval.running ? 'Searching…' : 'Search'}
-              </button>
-            </div>
-          </form>
-
-          <ul className="mt-3 flex flex-wrap gap-2" aria-label="Example questions">
-            {EXAMPLES.map((example) => (
-              <li key={example}>
-                <button
-                  type="button"
-                  onClick={() => submit(example)}
-                  disabled={retrieval.status !== 'ready'}
-                  className="rounded-full border border-slate-300 px-3 py-1 text-sm text-slate-700 hover:border-slate-500 disabled:opacity-60 dark:border-slate-700 dark:text-slate-300 dark:hover:border-slate-500"
-                >
-                  {example}
-                </button>
-              </li>
-            ))}
+      <header className="border-b border-line">
+        <nav
+          aria-label="Site"
+          className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6"
+        >
+          <span className="font-medium tracking-tight">Hybrid RAG, verified</span>
+          <ul className="flex gap-5 text-sm text-ink-2">
+            <li>
+              <a href="#method" onClick={jump('method')} className="hover:text-ink">
+                Method
+              </a>
+            </li>
+            <li>
+              <a href="#evaluation" onClick={jump('evaluation')} className="hover:text-ink">
+                Results
+              </a>
+            </li>
+            <li>
+              <a href="#design-system" onClick={jump('design-system')} className="hover:text-ink">
+                Design
+              </a>
+            </li>
           </ul>
+        </nav>
+      </header>
 
-          <IndexStatus retrieval={retrieval} />
-          {retrieval.run && <DegradedNotice degraded={retrieval.run.degraded} />}
+      <main className="mx-auto max-w-7xl px-4 sm:px-6">
+        <section
+          aria-labelledby="hero-heading"
+          className="grid gap-10 pt-12 pb-10 md:pt-20 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:gap-16"
+        >
+          <div>
+            <h1
+              id="hero-heading"
+              className="max-w-[18ch] text-4xl leading-[1.05] font-semibold tracking-tighter md:text-5xl lg:text-6xl"
+            >
+              Retrieval you can inspect. Citations that are checked.
+            </h1>
+            <p className="mt-5 max-w-[52ch] text-lg leading-relaxed text-ink-2">
+              Ask about WCAG 2.2 or the GOV.UK Design System, then follow every stage your question
+              went through.
+            </p>
 
-          <div id="results" className="mt-8">
-            <Tabs
-              label="Views"
-              selected={view}
-              onSelect={setView}
-              tabs={[
-                {
-                  id: 'results' as const,
-                  label: 'Answer',
-                  panel: <AnswerView retrieval={retrieval} state={answer} />,
-                },
-                {
-                  id: 'retrieval' as const,
-                  label: 'Retrieval',
-                  panel: <RetrievalDebugger retrieval={retrieval} />,
-                },
-                {
-                  id: 'explain' as const,
-                  label: 'How it works',
-                  panel: <Explain retrieval={retrieval} answer={answer} />,
-                },
-              ]}
-            />
+            <form
+              className="mt-8"
+              onSubmit={(event) => {
+                event.preventDefault();
+                submit(query);
+              }}
+            >
+              <label htmlFor={inputId} className="block text-sm font-medium">
+                Your question
+              </label>
+              <div className="mt-2 flex gap-2">
+                <input
+                  id={inputId}
+                  type="search"
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  disabled={retrieval.status !== 'ready'}
+                  placeholder="How much colour contrast does large text need?"
+                  className="min-w-0 flex-1 rounded-xl border border-line-strong bg-paper px-4 py-3 text-ink placeholder:text-muted disabled:opacity-60"
+                />
+                <button
+                  type="submit"
+                  disabled={retrieval.status !== 'ready' || retrieval.running}
+                  className="rounded-xl bg-ink px-5 py-3 font-medium text-paper transition-transform active:scale-[0.98] disabled:opacity-60"
+                >
+                  {retrieval.running ? 'Searching…' : 'Search'}
+                </button>
+              </div>
+            </form>
+
+            <ul className="mt-4 flex flex-wrap gap-2" aria-label="Example questions">
+              {EXAMPLES.map((example) => (
+                <li key={example}>
+                  <button
+                    type="button"
+                    onClick={() => submit(example)}
+                    disabled={retrieval.status !== 'ready'}
+                    className="rounded-full border border-line px-3 py-1 text-sm text-ink-2 transition-colors hover:border-line-strong hover:text-ink disabled:opacity-60"
+                  >
+                    {example}
+                  </button>
+                </li>
+              ))}
+            </ul>
+
+            <IndexStatus retrieval={retrieval} />
           </div>
-        </main>
-      </div>
+
+          <PipelineFigure retrieval={retrieval} answer={answer} />
+        </section>
+
+        {retrieval.run && <DegradedNotice degraded={retrieval.run.degraded} />}
+
+        <div id="results" className="pb-24">
+          <Tabs
+            label="Views"
+            sticky
+            selected={view}
+            onSelect={setView}
+            tabs={[
+              {
+                id: 'results' as const,
+                label: 'Answer',
+                panel: <AnswerView retrieval={retrieval} state={answer} />,
+              },
+              {
+                id: 'retrieval' as const,
+                label: 'Retrieval',
+                panel: <RetrievalDebugger retrieval={retrieval} />,
+              },
+              {
+                id: 'explain' as const,
+                label: 'How it works',
+                panel: (
+                  <Suspense fallback={<p className="mt-10 text-ink-2">Loading the walkthrough…</p>}>
+                    <Explain retrieval={retrieval} answer={answer} />
+                  </Suspense>
+                ),
+              },
+            ]}
+          />
+        </div>
+      </main>
     </div>
   );
 }
+
+type View = 'results' | 'retrieval' | 'explain';
+
+/**
+ * The walkthrough is most of the page's code and none of its first paint, so
+ * it loads when its tab is first opened rather than gating the search box.
+ */
+const Explain = lazy(() => import('./explain.tsx').then((module) => ({ default: module.Explain })));
 
 /**
  * Text for the single live region.
@@ -179,7 +242,7 @@ function IndexStatus({ retrieval }: { retrieval: Retrieval }) {
 
   if (status === 'failed') {
     return (
-      <p role="alert" className="mt-6 rounded-md border border-red-600 px-3 py-2 text-red-800 dark:text-red-300">
+      <p role="alert" className="mt-6 rounded-xl border border-unsupported px-3 py-2 text-unsupported">
         The index could not be loaded: {error}
       </p>
     );
@@ -187,15 +250,15 @@ function IndexStatus({ retrieval }: { retrieval: Retrieval }) {
 
   if (status === 'loading') {
     return (
-      <p className="mt-6 text-sm text-slate-600 dark:text-slate-400">Loading the index…</p>
+      <p className="mt-6 text-sm text-ink-2">Loading the index…</p>
     );
   }
 
   return (
-    <p className="mt-6 text-sm text-slate-600 dark:text-slate-400">
+    <p className="mt-6 text-sm text-ink-2">
       {meta.size.toLocaleString('en-GB')} chunks indexed
       {loadMs !== undefined && ` in ${Math.round(loadMs)} ms`}.{' '}
-      {hasVectors ? 'Dense and lexical retrieval available.' : 'Lexical retrieval only — no vector index is deployed.'}
+      {hasVectors ? 'Dense and lexical retrieval available.' : 'Lexical retrieval only: no vector index is deployed.'}
     </p>
   );
 }
@@ -210,9 +273,9 @@ function DegradedNotice({ degraded }: { degraded: DegradedStage[] }) {
   if (degraded.length === 0) return null;
 
   return (
-    <div className="mt-6 rounded-md border border-amber-600 px-3 py-2 text-sm">
+    <div className="mb-8 rounded-xl border border-partial px-4 py-3 text-sm">
       <h2 className="font-medium">Some stages did not run</h2>
-      <ul className="mt-1 list-disc space-y-0.5 pl-5 text-slate-700 dark:text-slate-300">
+      <ul className="mt-1 list-disc space-y-0.5 pl-5 text-ink-2">
         {degraded.map((entry) => (
           <li key={`${entry.stage}-${entry.reason}`}>
             <strong className="font-medium">{STAGE_LABEL[entry.stage] ?? entry.stage}:</strong>{' '}
@@ -220,7 +283,7 @@ function DegradedNotice({ degraded }: { degraded: DegradedStage[] }) {
           </li>
         ))}
       </ul>
-      <p className="mt-2 text-slate-600 dark:text-slate-400">
+      <p className="mt-2 text-ink-2">
         The results below are real, and worse than they would otherwise be.
       </p>
     </div>

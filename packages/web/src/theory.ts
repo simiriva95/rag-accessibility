@@ -123,10 +123,10 @@ export const PARADIGMS: Paradigm[] = [
     formula:
       'score(D, Q) = Σ_{q ∈ Q} idf(q) · f(q,D)·(k1+1) / ( f(q,D) + k1·(1 − b + b·|D|/avgdl) )\n' +
       'idf(q) = ln( 1 + (N − df(q) + 0.5) / (df(q) + 0.5) )',
-    cost: 'Proportional to the postings of the query terms. Here: 2–3 ms in the browser.',
+    cost: 'Proportional to the postings of the query terms. Here: 2-3 ms in the browser.',
     strengths: [
       'Exact identifiers survive: 2.4.11, aria-describedby, 4.5:1.',
-      'Fully explainable — every point of the score is a term you can name.',
+      'Fully explainable: every point of the score is a term you can name.',
       'No model, no GPU, no drift: the same index gives the same answer in five years.',
     ],
     failures: [
@@ -153,8 +153,8 @@ export const PARADIGMS: Paradigm[] = [
       'One encoder call for the query at the edge, then a linear scan: 1,592 × 384 ≈ 611k ' +
       'multiply-adds, a few milliseconds in a Web Worker.',
     strengths: [
-      'Robust to paraphrase and synonymy — the question need not share a word with its answer.',
-      'A single fixed-size vector per passage — cheap to store and to scan.',
+      'Robust to paraphrase and synonymy: the question need not share a word with its answer.',
+      'A single fixed-size vector per passage, cheap to store and to scan.',
     ],
     failures: [
       'Identifiers blur: a criterion number like 2.4.11 carries little signal in an embedding.',
@@ -169,8 +169,8 @@ export const PARADIGMS: Paradigm[] = [
     name: 'Hybrid retrieval by rank fusion',
     family: 'Reciprocal Rank Fusion',
     idea:
-      'Run both retrievers and merge their lists. The scores cannot be merged directly — BM25 is ' +
-      'an unbounded sum, cosine lives in [−1, 1] — and any normalisation is a tuning knob that ' +
+      'Run both retrievers and merge their lists. The scores cannot be merged directly (BM25 is ' +
+      'an unbounded sum, cosine lives in [−1, 1]), and any normalisation is a tuning knob that ' +
       'breaks on the next corpus. RRF reads only the ranks: each list gives a document a vote ' +
       'that decays with its position, and the constant k keeps a single confident list from ' +
       'carrying a document alone. Agreement outweighs certainty.',
@@ -195,10 +195,10 @@ export const PARADIGMS: Paradigm[] = [
       'A second, more expensive model reads the query and one candidate passage together, in a ' +
       'single transformer pass, so every query token can attend to every passage token. That ' +
       'joint reading is far more accurate than comparing two independent vectors, and far too ' +
-      'slow to run over a whole corpus — so it runs only over the 30 fused candidates, and ' +
+      'slow to run over a whole corpus, so it runs only over the 30 fused candidates, and ' +
       'keeps the best 8 for the generator.',
     formula: 'score(D, Q) = w · h_[CLS]( Enc( [CLS] Q [SEP] D [SEP] ) ),   applied to the top 30 only',
-    cost: 'One model call over 30 (query, passage) pairs at the edge — the slowest retrieval stage.',
+    cost: 'One model call over 30 (query, passage) pairs at the edge: the slowest retrieval stage.',
     strengths: [
       'Full cross-attention between query and passage.',
       'Decides what the generator reads first, which is what Success@5 and MRR measure.',
@@ -216,7 +216,7 @@ export const PARADIGMS: Paradigm[] = [
     family: 'Generator conditioned on evidence',
     idea:
       'A language model answers from the retrieved passages instead of from its parameters. ' +
-      'This makes the answer current, scoped to a corpus and — in principle — checkable, ' +
+      'This makes the answer current, scoped to a corpus and, in principle, checkable, ' +
       'because the evidence is known. In practice a model will still cite a passage for a claim ' +
       'it does not contain, which is why generation here is constrained to a schema and ' +
       'followed by verification.',
@@ -233,7 +233,7 @@ export const PARADIGMS: Paradigm[] = [
     idea:
       'The model does not write footnotes, it writes claims: a sentence, the sources it cites, ' +
       'and a quote that must appear verbatim in one of them. Verification then runs cheapest ' +
-      'first — an exact substring test, the mapping of the quote back to offsets in the source ' +
+      'first: an exact substring test, the mapping of the quote back to offsets in the source ' +
       'document, and only then an entailment judgement of whether the evidence supports the ' +
       'sentence. It is the “attributable to identified sources” property made operational.',
     formula:
@@ -247,7 +247,7 @@ export const PARADIGMS: Paradigm[] = [
       '189 probe citations from the real corpus: 0 wrong accepts, 0 wrong rejects.',
     ],
     failures: [
-      'A real quote can still be attached to a sentence it does not support — hence the judge.',
+      'A real quote can still be attached to a sentence it does not support, hence the judge.',
       'The judge is itself a model, and says so when it could not run.',
     ],
     references: [REF.rashkin2023, REF.gao2023],

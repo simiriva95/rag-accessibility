@@ -17,11 +17,14 @@ export function Tabs<Id extends string>({
   selected,
   onSelect,
   label,
+  sticky = false,
 }: {
   tabs: Tab<Id>[];
   selected: Id;
   onSelect: (id: Id) => void;
   label: string;
+  /** Pin the tablist under the top of the viewport, for a panel long enough to scroll away from it. */
+  sticky?: boolean;
 }) {
   const base = useId();
   const refs = useRef(new Map<Id, HTMLButtonElement>());
@@ -55,7 +58,7 @@ export function Tabs<Id extends string>({
         role="tablist"
         aria-label={label}
         onKeyDown={onKeyDown}
-        className="flex gap-1 border-b border-slate-200 dark:border-slate-800"
+        className={`flex gap-1 overflow-x-auto border-b border-line ${sticky ? 'sticky top-0 z-10 bg-paper/90 backdrop-blur' : ''}`}
       >
         {tabs.map((tab) => {
           const isSelected = tab.id === selected;
@@ -75,8 +78,8 @@ export function Tabs<Id extends string>({
               onClick={() => onSelect(tab.id)}
               className={`-mb-px border-b-2 px-3 py-2 text-sm font-medium ${
                 isSelected
-                  ? 'border-slate-900 dark:border-slate-100'
-                  : 'border-transparent text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100'
+                  ? 'border-ink'
+                  : 'border-transparent text-ink-2 hover:text-ink'
               }`}
             >
               {tab.label}
