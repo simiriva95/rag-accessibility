@@ -87,7 +87,7 @@ export function parseModelAnswer(raw: unknown): ParsedAnswer {
   if (typeof raw['answerable'] !== 'boolean') throw new Error('answer.answerable is not a boolean');
   if (!isStringArray(raw['sentences'])) throw new Error('answer.sentences is not an array of strings');
 
-  const sentences = raw['sentences'].map((sentence) => sentence.trim()).filter(Boolean);
+  const sentences = raw['sentences'].map((sentence) => stripMarkers(sentence).trim()).filter(Boolean);
   if (sentences.length === 0) throw new Error('answer.sentences is empty');
 
   const rawClaims = raw['claims'];
@@ -112,6 +112,21 @@ export function parseModelAnswer(raw: unknown): ParsedAnswer {
 
   return { answer: { answerable: raw['answerable'], sentences, claims }, dropped };
 }
+
+/**
+ * Citation markers some models append to a sentence despite the schema:
+ * "[claim 0]", or the cited chunk ids in brackets. The citation already lives
+ * in the claim, so the marker is noise in the prose. Only a trailing bracket
+ * holding nothing but those is removed; any other bracketed text is the
+ * model's words and stays.
+ */
+const MARKER = /\s*\[(?:claims? \d+(?:,\s*\d+)*|[0-9a-f]{16}(?:,\s*[0-9a-f]{16})*)\]\s*$/i;
+
+const stripMarkers = (sentence: string): string => {
+  let out = sentence;
+  while (MARKER.test(out)) out = out.replace(MARKER, '');
+  return out;
+};
 
 function claimProblem(candidate: unknown, sentenceCount: number): string | undefined {
   if (!isRecord(candidate)) return 'not an object';

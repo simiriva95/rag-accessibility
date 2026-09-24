@@ -80,6 +80,26 @@ describe('parseModelAnswer', () => {
   });
 });
 
+describe('citation markers in sentences', () => {
+  const parse = (sentence: string) =>
+    parseModelAnswer({
+      answerable: true,
+      sentences: [sentence],
+      claims: [{ sentenceIndex: 0, chunkIds: ['6a1bf7e7265f3bf9'], quote: 'x' }],
+    }).answer;
+
+  it('drops a trailing claim number or chunk-id list, and keeps the claim attached', () => {
+    expect(parse('Large text needs 3:1. [claim 0]').sentences).toEqual(['Large text needs 3:1.']);
+    const answer = parse('Large text needs 3:1. [5ff8cb3c3bdc4ad4, 6a1bf7e7265f3bf9]');
+    expect(answer.sentences).toEqual(['Large text needs 3:1.']);
+    expect(answer.claims[0]!.sentence).toBe('Large text needs 3:1.');
+  });
+
+  it('leaves bracketed words that are the model’s own', () => {
+    expect(parse('Use a label [not a placeholder].').sentences).toEqual(['Use a label [not a placeholder].']);
+  });
+});
+
 describe('ANSWER_SCHEMA', () => {
   it('requires exactly the fields the parser requires', () => {
     expect([...ANSWER_SCHEMA.required]).toEqual(['answerable', 'sentences', 'claims']);

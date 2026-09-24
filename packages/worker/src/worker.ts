@@ -394,7 +394,8 @@ Rules:
 - Write the answer as separate sentences, one per item in "sentences".
 - For every sentence that states a fact, add a claim citing the sources it came from.
 - "quote" must be copied character for character from one of the chunks you cite. Do not paraphrase it, do not shorten it with an ellipsis, do not join two separate passages. A quote that is not in the source is treated as a fabrication.
-- Prefer a short exact quote over a long approximate one.`;
+- Prefer a short exact quote over a long approximate one.
+- Do not put source ids or claim numbers inside the sentences. Citations belong in claims only.`;
 
 const sourceBlock = (sources: Chunkish[]) =>
   sources.map((source) => `<source id="${source.id}">\n${source.text}\n</source>`).join('\n\n');
