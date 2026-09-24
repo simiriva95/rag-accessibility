@@ -2,6 +2,17 @@ import { RRF_K, tokenize, type Scored, type VerifiedClaim } from '@rag/core';
 import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
 import type { ChunkMeta } from './retrieval.worker.ts';
 import { IngestView } from './ingest-view.tsx';
+import {
+  PlainWords,
+  bm25Plain,
+  densePlain,
+  generatePlain,
+  rerankPlain,
+  rrfPlain,
+  tokenizePlain,
+  verifyPlain,
+  type Plain,
+} from './plain.tsx';
 import { RunDiagram } from './run-diagram.tsx';
 import { Tabs } from './tabs.tsx';
 import {
@@ -193,12 +204,13 @@ function Walkthrough({ run, meta, answer }: { run: Run; meta: Map<string, ChunkM
   const stage = (name: 'dense' | 'lexical' | 'fused') => run.stages.find((s) => s.name === name);
   const degraded = (name: string) => run.degraded.find((d) => d.stage === name)?.reason;
   const timings = answer.phase === 'answered' ? answer.result.timings : undefined;
+  const ctx = { run, meta, title: (id: string) => title(meta, id) };
 
   return (
     <section aria-labelledby="walkthrough-heading">
       <SectionHeading
         id="walkthrough-heading"
-        lead="Seven stages, in the order they ran. Each one names what it computed, with which model or formula, where it ran, and why it is in the pipeline at all."
+        lead="Seven stages, in the order they ran. Each one is explained twice: first in plain words, with what it did to your question, then technically, with the model or formula behind it."
       >
         What happened to “{run.query}”
       </SectionHeading>
@@ -209,7 +221,7 @@ function Walkthrough({ run, meta, answer }: { run: Run; meta: Map<string, ChunkM
 
       {/* Keyed on the run, so a new question replays the charts rather than jumping to new values. */}
       <ol key={run.query + run.timings.total} className="mt-12 border-l border-line">
-        <Step id="step-tokenize" title="Tokenization" where="Browser, Web Worker" why={WHY.tokenize}>
+        <Step id="step-tokenize" title="Tokenization" where="Browser, Web Worker" why={WHY.tokenize} plain={tokenizePlain(ctx)}>
           <Tokens query={run.query} terms={run.bm25.terms} />
         </Step>
 
@@ -219,6 +231,7 @@ function Walkthrough({ run, meta, answer }: { run: Run; meta: Map<string, ChunkM
           where="Browser, Web Worker"
           time={stage('lexical')?.ms}
           why={WHY.bm25}
+          plain={bm25Plain(ctx)}
         >
           <Bm25Step run={run} meta={meta} />
         </Step>
@@ -229,12 +242,13 @@ function Walkthrough({ run, meta, answer }: { run: Run; meta: Map<string, ChunkM
           where="Edge embeds, browser scans"
           time={(run.timings.embed ?? 0) + (stage('dense')?.ms ?? 0) || undefined}
           why={WHY.dense}
+          plain={densePlain(ctx)}
           missing={degraded('embed') ?? degraded('dense')}
         >
           <DenseStep run={run} meta={meta} />
         </Step>
 
-        <Step id="step-rrf" title="Reciprocal Rank Fusion" where="Browser, Web Worker" time={stage('fused')?.ms} why={WHY.rrf}>
+        <Step id="step-rrf" title="Reciprocal Rank Fusion" where="Browser, Web Worker" time={stage('fused')?.ms} why={WHY.rrf} plain={rrfPlain(ctx)}>
           <RrfStep run={run} meta={meta} />
         </Step>
 
@@ -244,6 +258,7 @@ function Walkthrough({ run, meta, answer }: { run: Run; meta: Map<string, ChunkM
           where="Edge, Workers AI"
           time={run.timings.rerank}
           why={WHY.rerank}
+          plain={rerankPlain(ctx)}
           missing={degraded('rerank')}
         >
           <RerankStep run={run} meta={meta} />
@@ -255,6 +270,7 @@ function Walkthrough({ run, meta, answer }: { run: Run; meta: Map<string, ChunkM
           where="Edge, Gemini or Workers AI"
           time={timings?.generate}
           why={WHY.generate}
+          plain={generatePlain({ answer, run })}
         >
           <GenerateStep answer={answer} />
         </Step>
@@ -265,6 +281,7 @@ function Walkthrough({ run, meta, answer }: { run: Run; meta: Map<string, ChunkM
           where="Browser, then edge"
           time={timings?.verify}
           why={WHY.verify}
+          plain={verifyPlain({ answer })}
         >
           <VerifyStep answer={answer} meta={meta} />
         </Step>
@@ -307,6 +324,7 @@ function Step({
   where,
   time,
   why,
+  plain,
   missing,
   children,
 }: {
@@ -315,6 +333,7 @@ function Step({
   where: string;
   time?: number | undefined;
   why: string;
+  plain: Plain;
   missing?: string | undefined;
   children: ReactNode;
 }) {
@@ -329,10 +348,17 @@ function Step({
         <h3 id={id} className="mt-2 scroll-mt-20 text-2xl font-semibold tracking-tight">
           {heading}
         </h3>
-        <p className="mt-3 max-w-[65ch] leading-relaxed text-ink-2">{why}</p>
         {missing && (
           <p className="mt-4 rounded-xl border border-partial px-3 py-2 text-sm">Did not run on this query: {missing}</p>
         )}
+        <div className="mt-5">
+          <PlainWords plain={plain} />
+        </div>
+        <h4 className="mt-8 font-medium">The technical version</h4>
+        <p className="mt-2 max-w-[65ch] leading-relaxed text-ink-2">
+          <span className="text-ink">Why this stage exists. </span>
+          {why}
+        </p>
         <div className="mt-6 space-y-6">{children}</div>
       </section>
     </li>
@@ -808,7 +834,9 @@ function ParadigmPanel({ paradigm }: { paradigm: Paradigm }) {
           <h3 className="text-2xl font-semibold tracking-tight">{paradigm.name}</h3>
           <p className="mt-1 text-sm text-muted">{paradigm.family}</p>
         </div>
-        <p className="max-w-[65ch] text-lg leading-relaxed">{paradigm.idea}</p>
+        <PlainWords plain={{ analogy: paradigm.plain, yours: [] }} />
+        <h4 className="font-medium">The technical version</h4>
+        <p className="max-w-[65ch] leading-relaxed">{paradigm.idea}</p>
         <Formula label="Definition">{paradigm.formula}</Formula>
         <div className="grid gap-6 text-sm sm:grid-cols-2">
           <div>
@@ -907,7 +935,7 @@ function Evaluation() {
     <section aria-labelledby="evaluation">
       <SectionHeading
         id="evaluation"
-        lead="An ablation over 60 hand-annotated questions and 1,592 chunks: each retriever alone, then fused, then reranked. Seven questions have no answer in the corpus and are excluded, leaving 53."
+        lead="An ablation means taking a recipe apart to see what each ingredient adds: run each search alone, then combined, then reranked, and compare. The test is a golden set of 60 questions whose right answers were marked by hand beforehand, like an answer key. Seven have no answer in the corpus and are excluded, leaving 53."
       >
         How the combination was justified
       </SectionHeading>
@@ -916,7 +944,8 @@ function Evaluation() {
         {METRICS.map((m) => (
           <div key={m.name}>
             <dt className="font-medium">{m.name}</dt>
-            <dd className="mt-1 font-mono text-xs text-ink-2">{m.formula}</dd>
+            <dd className="mt-1 leading-relaxed">{m.plain}</dd>
+            <dd className="mt-2 font-mono text-xs text-ink-2">{m.formula}</dd>
             <dd className="mt-1 text-sm leading-relaxed text-ink-2">{m.reads}</dd>
           </div>
         ))}

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import results from './ingest-ablation.json';
+import { PlainWords } from './plain.tsx';
 import { Arrow, Card, FragmentPair, Lane, type Node } from './run-diagram.tsx';
 import { Tabs } from './tabs.tsx';
 import { INGEST, type IngestStage } from './theory.ts';
@@ -38,9 +39,10 @@ export function IngestView() {
           How the index was built
         </h2>
         <p className="mt-4 max-w-[65ch] text-lg leading-relaxed text-ink-2">
-          Everything the browser searches was computed once, at build time, by eight algorithms in
-          sequence. Each was then changed on its own and the {results.questions} answerable golden
-          questions re-run, to measure what it is worth.
+          Before anyone asks anything, the site prepares its library: it downloads the pages, cleans
+          them, cuts them into pieces and builds two indexes, one for words and one for meanings. Eight
+          algorithms do this, once, when the site is built. To see what each one is worth, each was
+          changed on its own and the {results.questions} answer-key questions were asked again.
         </p>
       </header>
 
@@ -154,7 +156,9 @@ function StagePanel({ stage }: { stage: IngestStage }) {
           <h3 className="text-2xl font-semibold tracking-tight">{stage.name}</h3>
           <p className="mt-1 text-sm text-muted">{stage.family}</p>
         </div>
-        <p className="max-w-[65ch] text-lg leading-relaxed">{stage.idea}</p>
+        <PlainWords plain={{ analogy: stage.plain, yours: [] }} />
+        <h4 className="font-medium">The technical version</h4>
+        <p className="max-w-[65ch] leading-relaxed">{stage.idea}</p>
         <div>
           <h4 className="font-medium">How it runs</h4>
           <ol className="mt-2 list-decimal space-y-1.5 pl-5 text-sm leading-relaxed text-ink-2">
