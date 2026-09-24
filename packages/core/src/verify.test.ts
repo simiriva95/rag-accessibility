@@ -342,3 +342,16 @@ describe('conformance level, in Italian', () => {
     expect(namesLevel('Al Livello AAA il testo grande richiede 4.5:1.', {}, 'AAA')).toBe(true);
   });
 });
+
+describe('the evidence the judge reads', () => {
+  it('carries the document title, where a criterion states its level', async () => {
+    const seen: string[] = [];
+    const spy: EntailmentJudge = async (pairs) => {
+      seen.push(...pairs.map((pair) => pair.evidence));
+      return pairs.map(() => 1);
+    };
+    await verifyClaims([claim()], chunks(chunk({ docTitle: 'Understanding SC 1.4.6 Contrast (Enhanced) (Level AAA)' })), spy);
+    expect(seen[0]).toContain('(Level AAA)');
+    expect(seen[0]).toContain(chunk().text);
+  });
+});

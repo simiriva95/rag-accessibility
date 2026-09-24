@@ -234,7 +234,7 @@ export async function verifyClaims(
       : await judge(
           judged.map(({ match, index }) => ({
             sentence: claims[index]!.sentence,
-            evidence: match.first.chunk.text,
+            evidence: evidenceOf(match.first.chunk),
           })),
         );
 
@@ -301,6 +301,19 @@ export function namesLevel(sentence: string, chunk: Pick<Chunk, 'scRef'>, level:
   const pattern = level === 'A' ? /\b(?:Level|Livello)\s+A\b/ : new RegExp(`\\b${level}\\b`);
   return pattern.test(sentence) || (chunk.scRef !== undefined && sentence.includes(chunk.scRef));
 }
+
+/**
+ * What the judge reads: the chunk, under the title and headings it sits in.
+ *
+ * A chunk alone can leave out what its page states once at the top. A
+ * criterion's level lives in the document title ("Understanding SC 1.4.6
+ * Contrast (Enhanced) (Level AAA)"), not in every paragraph, so a judge shown
+ * the paragraph alone marked "4.5:1 at Level AAA" as adding a condition the
+ * evidence does not give. The quote is still matched against the chunk text
+ * only; this is context for the judgement, not more text to quote from.
+ */
+export const evidenceOf = (chunk: Pick<Chunk, 'docTitle' | 'headingPath' | 'text'>): string =>
+  [chunk.docTitle, chunk.headingPath.join(' > '), '', chunk.text].join('\n');
 
 /** One claim, for callers that have only one. Judged in a batch of one. */
 export const verifyClaim = async (
