@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Scored } from '@rag/core';
 import { embedQuery, isDegraded, rerank, type Degraded } from './edge.ts';
-import type { ChunkMeta, Stage, WorkerRequest, WorkerResponse } from './retrieval.worker.ts';
+import type { Bm25Explanation, ChunkMeta, Stage, WorkerRequest, WorkerResponse } from './retrieval.worker.ts';
 
 /**
  * Drives the retrieval pipeline: edge embedding, the worker's three candidate
@@ -22,6 +22,10 @@ export type Run = {
   timings: { embed?: number; rerank?: number; total: number };
   /** One entry per stage that could not run, in pipeline order. */
   degraded: (Degraded & { stage: string })[];
+  /** The top lexical hit's score, term by term. */
+  bm25: Bm25Explanation;
+  /** The query's embedding as the edge returned it, before normalization. */
+  vector?: number[];
 };
 
 export type DegradedStage = Degraded & { stage: string };
@@ -105,6 +109,7 @@ export function useRetrieval(): Retrieval {
     query: string;
     started: number;
     embedMs?: number;
+    vector?: number[];
     degraded: DegradedStage[];
   } | null>(null);
 
@@ -148,6 +153,8 @@ export function useRetrieval(): Retrieval {
         total: performance.now() - context.started,
       },
       degraded: context.degraded,
+      bm25: data.bm25,
+      ...(context.vector ? { vector: context.vector } : {}),
     });
     setRunning(false);
   }, []);
@@ -168,6 +175,7 @@ export function useRetrieval(): Retrieval {
 
       context.embedMs = performance.now() - started;
       if (isDegraded(embedded)) context.degraded.push({ stage: 'embed', ...embedded.degraded });
+      else context.vector = embedded.ok.vector;
 
       workerRef.current?.postMessage({
         type: 'search',

@@ -63,7 +63,7 @@ export function buildBm25Index(
  * The outer 1 + keeps it positive for a term that appears in every document,
  * where the raw form goes negative and starts penalising matches.
  */
-const idf = (docCount: number, df: number) => Math.log(1 + (docCount - df + 0.5) / (df + 0.5));
+export const bm25Idf = (docCount: number, df: number) => Math.log(1 + (docCount - df + 0.5) / (df + 0.5));
 
 export function searchBm25(index: Bm25Index, query: string, topK = 30): Scored[] {
   const { k1, b } = index.params;
@@ -76,7 +76,7 @@ export function searchBm25(index: Bm25Index, query: string, topK = 30): Scored[]
     const posting = index.postings[term];
     if (!posting) continue;
 
-    const weight = idf(docCount, posting.length / 2);
+    const weight = bm25Idf(docCount, posting.length / 2);
 
     for (let i = 0; i < posting.length; i += 2) {
       const doc = posting[i]!;
@@ -90,4 +90,30 @@ export function searchBm25(index: Bm25Index, query: string, topK = 30): Scored[]
     .sort((x, y) => y[1] - x[1])
     .slice(0, topK)
     .map(([doc, score]) => ({ chunkId: index.docIds[doc]!, score }));
+}
+
+/** One query term's part in one document's score. */
+export type TermContribution = { term: string; df: number; idf: number; tf: number; score: number };
+
+/**
+ * The BM25 sum for one document, term by term — the same arithmetic as
+ * searchBm25, kept apart so the ranking loop stays a tight loop. It exists so
+ * the UI can show why a document scored what it did rather than assert it.
+ */
+export function explainBm25(index: Bm25Index, query: string, chunkId: string): TermContribution[] {
+  const { k1, b } = index.params;
+  const docCount = index.docIds.length;
+  const doc = index.docIds.indexOf(chunkId);
+
+  return [...new Set(tokenize(query))].map((term) => {
+    const posting = index.postings[term] ?? [];
+    const df = posting.length / 2;
+    const weight = df === 0 ? 0 : bm25Idf(docCount, df);
+
+    let tf = 0;
+    for (let i = 0; i < posting.length; i += 2) if (posting[i] === doc) tf = posting[i + 1]!;
+
+    const norm = doc === -1 ? 1 : 1 - b + (b * index.lengths[doc]!) / index.avgdl;
+    return { term, df, idf: weight, tf, score: tf === 0 ? 0 : (weight * (tf * (k1 + 1))) / (tf + k1 * norm) };
+  });
 }

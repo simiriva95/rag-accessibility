@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BM25_DEFAULTS, buildBm25Index, searchBm25 } from './bm25.ts';
+import { BM25_DEFAULTS, buildBm25Index, explainBm25, searchBm25 } from './bm25.ts';
 import { tokenize } from './tokenize.ts';
 
 const corpus = [
@@ -90,5 +90,17 @@ describe('buildBm25Index', () => {
     const index = buildBm25Index([]);
     expect(index.avgdl).toBe(0);
     expect(searchBm25(index, 'focus')).toEqual([]);
+  });
+});
+
+describe('explainBm25', () => {
+  it('sums to the score searchBm25 ranked with', () => {
+    const index = buildBm25Index(corpus);
+    for (const query of ['aria-describedby hint', 'focus contrast text', 'nothing matches this']) {
+      for (const hit of searchBm25(index, query, 10)) {
+        const total = explainBm25(index, query, hit.chunkId).reduce((sum, term) => sum + term.score, 0);
+        expect(total).toBeCloseTo(hit.score, 10);
+      }
+    }
   });
 });

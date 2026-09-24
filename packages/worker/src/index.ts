@@ -310,7 +310,8 @@ Rules:
 const sourceBlock = (sources: Chunkish[]) =>
   sources.map((source) => `<source id="${source.id}">\n${source.text}\n</source>`).join('\n\n');
 
-export type AnswerResult = ParsedAnswer | { degraded: { reason: string } };
+/** `model` names whichever model in the chain actually answered, so the UI can say which one did. */
+export type AnswerResult = (ParsedAnswer & { model: string }) | { degraded: { reason: string } };
 
 /**
  * Generates an answer, or reports why it could not.
@@ -336,7 +337,7 @@ export async function answer(question: string, sources: Chunkish[], env: Env): P
     }));
 
     if ('failed' in attempt) return { degraded: { reason: attempt.failed } };
-    const { response } = attempt;
+    const { response, model } = attempt;
 
     const body = (await response.json()) as {
       candidates?: { content?: { parts?: { text?: string }[] } }[];
@@ -344,7 +345,7 @@ export async function answer(question: string, sources: Chunkish[], env: Env): P
     const raw = body.candidates?.[0]?.content?.parts?.[0]?.text;
     if (!raw) return { degraded: { reason: 'generation returned no content' } };
 
-    return parseModelAnswer(JSON.parse(raw));
+    return { ...parseModelAnswer(JSON.parse(raw)), model };
   } catch (error) {
     return { degraded: { reason: (error as Error).message } };
   }

@@ -23,6 +23,8 @@ export type Answered = {
   dropped: string[];
   /** The chunks the answer was written from, in the order they were given. */
   sources: Chunk[];
+  /** Which model in the chain answered, when the worker reports it. */
+  model?: string;
 };
 
 export type AnswerState =
@@ -87,7 +89,13 @@ export function useAnswer(retrieval: Retrieval): AnswerState {
 
       setState({
         phase: 'answered',
-        result: { answer: payload.answer, claims, dropped: payload.dropped, sources },
+        result: {
+          answer: payload.answer,
+          claims,
+          dropped: payload.dropped,
+          sources,
+          ...(payload.model ? { model: payload.model } : {}),
+        },
       });
     })();
   }, [run, chunksFor]);

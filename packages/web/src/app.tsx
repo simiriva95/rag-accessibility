@@ -1,7 +1,9 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import { AnswerView } from './answer-view.tsx';
 import { RetrievalDebugger } from './debugger.tsx';
+import { Explain } from './explain.tsx';
 import { Tabs } from './tabs.tsx';
+import { useAnswer } from './use-answer.ts';
 import { useRetrieval, type DegradedStage, type Retrieval, type Run } from './use-retrieval.ts';
 
 const EXAMPLES = [
@@ -13,10 +15,13 @@ const EXAMPLES = [
 
 export function App() {
   const retrieval = useRetrieval();
+  // Lifted here because two views read it: the answer, and the walkthrough of
+  // how that answer was made. One generation per run, not one per view.
+  const answer = useAnswer(retrieval);
   const [query, setQuery] = useState('');
   const inputId = useId();
   const announcement = useAnnouncement(retrieval);
-  const [view, setView] = useState<'results' | 'retrieval'>('results');
+  const [view, setView] = useState<'results' | 'retrieval' | 'explain'>('results');
 
   const submit = (value: string) => {
     setQuery(value);
@@ -101,11 +106,20 @@ export function App() {
               selected={view}
               onSelect={setView}
               tabs={[
-                { id: 'results' as const, label: 'Answer', panel: <AnswerView retrieval={retrieval} /> },
+                {
+                  id: 'results' as const,
+                  label: 'Answer',
+                  panel: <AnswerView retrieval={retrieval} state={answer} />,
+                },
                 {
                   id: 'retrieval' as const,
                   label: 'Retrieval',
                   panel: <RetrievalDebugger retrieval={retrieval} />,
+                },
+                {
+                  id: 'explain' as const,
+                  label: 'How it works',
+                  panel: <Explain retrieval={retrieval} answer={answer} />,
                 },
               ]}
             />

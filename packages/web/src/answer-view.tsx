@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { statusOf, type Chunk, type SentenceStatus, type VerifiedClaim } from '@rag/core';
 import { SourceDialog, type SourceTarget } from './source-dialog.tsx';
-import { useAnswer, type Answered } from './use-answer.ts';
+import type { AnswerState, Answered } from './use-answer.ts';
 import type { Retrieval } from './use-retrieval.ts';
 
 /**
@@ -39,8 +39,7 @@ const PRESENTATION: Record<SentenceStatus, { mark: string; label: string; classN
   uncited: { mark: '·', label: 'uncited: this sentence claims nothing', className: 'decoration-dotted' },
 };
 
-export function AnswerView({ retrieval }: { retrieval: Retrieval }) {
-  const state = useAnswer(retrieval);
+export function AnswerView({ retrieval, state }: { retrieval: Retrieval; state: AnswerState }) {
   const [target, setTarget] = useState<SourceTarget>();
 
   if (!retrieval.run) {

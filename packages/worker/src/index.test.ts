@@ -190,7 +190,7 @@ describe('answer', () => {
 
     const result = await answer('q', candidates, { GEMINI_API_KEY: 'k', GEMINI_MODEL: 'busy, spare' });
 
-    expect('answer' in result).toBe(true);
+    expect('answer' in result && result.model).toBe('spare');
     expect(tried.filter((m) => m === 'busy')).toHaveLength(3); // tried, then retried twice
     expect(tried.at(-1)).toBe('spare');
     vi.unstubAllGlobals();

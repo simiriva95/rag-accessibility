@@ -1,5 +1,6 @@
 import {
   decodeDenseVectors,
+  explainBm25,
   fuseRrf,
   searchBm25,
   searchDense,
@@ -7,6 +8,7 @@ import {
   type Chunk,
   type DenseVectors,
   type Scored,
+  type TermContribution,
 } from '@rag/core';
 
 /**
@@ -29,9 +31,20 @@ export type WorkerRequest =
 
 export type Stage = { name: 'dense' | 'lexical' | 'fused'; hits: Scored[]; ms: number };
 
+/** Why the top lexical hit scored what it did, term by term, with the index constants. */
+export type Bm25Explanation = {
+  chunkId?: string;
+  terms: TermContribution[];
+  k1: number;
+  b: number;
+  avgdl: number;
+  docCount: number;
+  docLength?: number;
+};
+
 export type WorkerResponse =
   | { type: 'ready'; chunks: number; hasVectors: boolean; ms: number }
-  | { type: 'results'; id: number; stages: Stage[]; denseSkipped?: string }
+  | { type: 'results'; id: number; stages: Stage[]; bm25: Bm25Explanation; denseSkipped?: string }
   | { type: 'error'; message: string };
 
 /**
@@ -115,7 +128,22 @@ function search(request: Extract<WorkerRequest, { type: 'search' }>): void {
   const fused = fuseRrf(dense.length > 0 ? [dense, lexical] : [lexical], { topK });
   stages.push({ name: 'fused', hits: fused, ms: performance.now() - fuseStart });
 
-  post({ type: 'results', id: request.id, stages, ...(denseSkipped ? { denseSkipped } : {}) });
+  const top = lexical[0]?.chunkId;
+  const bm25Explanation: Bm25Explanation = {
+    ...(top ? { chunkId: top, docLength: bm25.lengths[bm25.docIds.indexOf(top)]! } : {}),
+    terms: explainBm25(bm25, request.query, top ?? ''),
+    ...bm25.params,
+    avgdl: bm25.avgdl,
+    docCount: bm25.docIds.length,
+  };
+
+  post({
+    type: 'results',
+    id: request.id,
+    stages,
+    bm25: bm25Explanation,
+    ...(denseSkipped ? { denseSkipped } : {}),
+  });
 }
 
 self.onmessage = async (event: MessageEvent<WorkerRequest>) => {

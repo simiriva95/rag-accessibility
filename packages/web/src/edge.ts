@@ -49,7 +49,10 @@ export const rerank = (
   call('/rerank', { query, candidates });
 
 /** What the worker returns from /answer: a parsed answer, or why there is none. */
-export type Generated = { answer: ModelAnswer; dropped: string[] } | { degraded: Degraded };
+export type Generated =
+  // `model` is absent from a worker deployed before it was reported.
+  | { answer: ModelAnswer; dropped: string[]; model?: string }
+  | { degraded: Degraded };
 
 export const generate = (
   question: string,
