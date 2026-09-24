@@ -11,26 +11,29 @@ relevant chunk and are excluded from every column.
 | Retriever | Recall@5 | Recall@10 | Recall@30 | Success@5 | nDCG@10 | MRR |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
 | BM25 only | 40.5% | 59.2% | 78.2% | 68.6% | 0.466 | 0.514 |
-| Dense only | — | — | — | — | — | — |
-| Hybrid (RRF) | — | — | — | — | — | — |
-| Hybrid + rerank | — | — | — | — | — | — |
+| Dense only | 44.0% | 63.8% | 79.7% | 65.7% | 0.504 | 0.541 |
+| Hybrid (RRF) | 53.6% | 66.9% | 85.1% | 82.9% | 0.534 | 0.601 |
+| Hybrid + rerank | 63.7% | 67.1% | 66.6% | 97.1% | 0.519 | 0.739 |
 
-**Dense only** did not run: no data/index/vectors.bin — run the ingest with Workers AI credentials.
-**Hybrid (RRF)** did not run: no data/index/vectors.bin — run the ingest with Workers AI credentials.
-**Hybrid + rerank** did not run: the reranker is week 2 work and is not implemented yet.
+The reranked row returns **8** results, not 30. Recall@30 and nDCG@10 are bounded by
+that: eight results cannot cover thirty, and positions nine and ten score nothing. Read
+those two columns as "eight against thirty" rather than as the reranker doing worse. The
+columns that compare like with like are Recall@5, Success@5 and MRR — and the reranker
+exists to hand the generator a short, well-ordered context, which is what those measure.
+
 
 ## Recall@10 by question kind
 
 | Retriever | identifier (12) | conceptual (17) | design (6) |
 | --- | ---: | ---: | ---: |
 | BM25 only | 66.5% | 47.3% | 78.3% |
-| Dense only | — | — | — |
-| Hybrid (RRF) | — | — | — |
-| Hybrid + rerank | — | — | — |
+| Dense only | 50.6% | 66.3% | 83.5% |
+| Hybrid (RRF) | 65.8% | 60.8% | 86.3% |
+| Hybrid + rerank | 73.7% | 62.4% | 67.6% |
 
 ## What each row is
 
 - **BM25 only** — Lexical. Exact terms, identifiers, criterion numbers.
 - **Dense only** — bge-small-en-v1.5, int8, brute-force cosine.
 - **Hybrid (RRF)** — Both candidate lists fused by reciprocal rank, k = 60.
-- **Hybrid + rerank** — bge-reranker-base over the fused top 30.
+- **Hybrid + rerank** — bge-reranker-base over the fused top 30, keeping 8.

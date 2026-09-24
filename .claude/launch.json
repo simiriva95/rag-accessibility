@@ -4,8 +4,8 @@
     {
       "name": "web",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["--filter", "@rag/web", "dev", "--port", "5173", "--strictPort"],
-      "port": 5173
+      "runtimeArgs": ["--filter", "@rag/web", "dev", "--port", "5178", "--strictPort"],
+      "port": 5178
     }
   ]
 }

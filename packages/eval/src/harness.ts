@@ -8,6 +8,7 @@ import {
   type Bm25Index,
   type Chunk,
   type DenseIndex,
+  type Scored,
 } from '@rag/core';
 import { mean, ndcgAt, recallAt, reciprocalRank, successAt } from './metrics.ts';
 import { loadChunks, resolveGolden, type ResolvedQuestion } from './resolve.ts';
@@ -71,22 +72,67 @@ async function queryVectors(questions: ResolvedQuestion[]): Promise<Map<string, 
 
   const missing = questions.filter((q) => cache[q.question] === undefined);
   if (missing.length > 0) {
-    const { credentialsFromEnv, embedTexts, QUERY_PREFIX } = await import('@rag/ingest/embed');
-    let credentials;
+    const { backendFromEnv, embedQuery } = await import('@rag/ingest/embed');
+    let backend;
     try {
-      credentials = credentialsFromEnv();
+      backend = backendFromEnv();
     } catch {
       return undefined;
     }
-    const vectors = await embedTexts(
-      missing.map((q) => QUERY_PREFIX + q.question),
-      credentials,
-    );
+    // One at a time: a query carries the instruction prefix, and only the
+    // single-query path knows whether the backend applies it already.
+    const vectors: Float32Array[] = [];
+    for (const q of missing) vectors.push(await embedQuery(q.question, backend));
     for (const [i, q] of missing.entries()) cache[q.question] = [...vectors[i]!];
     await writeFile(cacheFile, JSON.stringify(cache));
   }
 
   return new Map(questions.map((q) => [q.question, Float32Array.from(cache[q.question]!)]));
+}
+
+/**
+ * Reranks the fused candidates through the deployed worker.
+ *
+ * The cut to 8 is the point of the row, not an incidental limit: the reranker
+ * exists to hand the generator a short, well-ordered context. Recall@30 for
+ * this row therefore cannot exceed what eight results can contain, and the
+ * table says so rather than quietly comparing eight against thirty.
+ */
+async function rerank(
+  question: string,
+  fused: Scored[],
+  workerUrl: string,
+  byId: Map<string, Chunk>,
+): Promise<string[]> {
+  const candidates = fused
+    .map((hit) => ({ id: hit.chunkId, text: byId.get(hit.chunkId)?.text ?? '' }))
+    .filter((candidate) => candidate.text !== '');
+
+  for (let attempt = 0; ; attempt++) {
+    const response = await fetch(`${workerUrl}/rerank`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ query: question, candidates }),
+    });
+
+    if (response.status === 429 || response.status >= 500) {
+      if (attempt >= 6) throw new Error(`reranker kept returning ${response.status}`);
+      const wait = 2 ** attempt * 1000;
+      process.stderr.write(`  ${response.status}, retrying in ${wait / 1000}s\n`);
+      await new Promise((r) => setTimeout(r, wait));
+      continue;
+    }
+
+    const body = (await response.json()) as {
+      results?: { id: string }[];
+      degraded?: { reason: string };
+    };
+    // A degraded rerank returns the fused order, which would make this row a
+    // duplicate of the one above it and say nothing. Better to stop.
+    if (body.degraded) throw new Error(`reranker degraded: ${body.degraded.reason}`);
+    if (!body.results) throw new Error('reranker returned no results');
+    return body.results.map((r) => r.id);
+  }
 }
 
 async function score(retriever: Retriever, questions: ResolvedQuestion[]): Promise<Row> {
@@ -151,6 +197,8 @@ async function main() {
   }
 
   const chunks = loadChunks();
+  const byId = new Map(chunks.map((chunk) => [chunk.id, chunk]));
+  const workerUrl = (process.env['VITE_WORKER_URL'] ?? '').replace(/\/$/, '');
   const questions = resolveGolden(chunks);
   const bm25: Bm25Index = JSON.parse(await readFile(join(INDEX, 'bm25.json'), 'utf8'));
 
@@ -191,8 +239,17 @@ async function main() {
     },
     {
       name: 'Hybrid + rerank',
-      description: 'bge-reranker-base over the fused top 30.',
-      unavailable: 'the reranker is week 2 work and is not implemented yet',
+      description: 'bge-reranker-base over the fused top 30, keeping 8.',
+      ...(denseUnavailable
+        ? { unavailable: denseUnavailable }
+        : !workerUrl
+          ? { unavailable: 'needs VITE_WORKER_URL pointing at a deployed worker' }
+          : {
+              run: async (q: ResolvedQuestion) => {
+                const fused = fuseRrf([semantic(q), lexical(q)], { topK: CANDIDATES });
+                return rerank(q.question, fused, workerUrl, byId);
+              },
+            }),
     },
   ];
 
@@ -215,6 +272,16 @@ async function main() {
     '',
     table(rows),
     '',
+    ...(rows.some((row) => row.retriever.name.includes('rerank') && row.retriever.run)
+      ? [
+          'The reranked row returns **8** results, not 30. Recall@30 and nDCG@10 are bounded by',
+          'that: eight results cannot cover thirty, and positions nine and ten score nothing. Read',
+          'those two columns as "eight against thirty" rather than as the reranker doing worse. The',
+          'columns that compare like with like are Recall@5, Success@5 and MRR — and the reranker',
+          'exists to hand the generator a short, well-ordered context, which is what those measure.',
+          '',
+        ]
+      : []),
     ...rows
       .filter((row) => row.retriever.unavailable)
       .map((row) => `**${row.retriever.name}** did not run: ${row.retriever.unavailable}.`),

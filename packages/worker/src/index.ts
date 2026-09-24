@@ -36,6 +36,12 @@ const LIMITS = {
   pairs: 12,
   sentence: 1000,
   chunkChars: 2400,
+  /**
+   * Documents per embedding request. 1,592 chunks in batches of this size is
+   * 16 requests, which fits inside one rate-limit window — the ingest finishes
+   * without ever being throttled.
+   */
+  documents: 100,
 } as const;
 
 const RERANK_OUT = 8;
@@ -93,19 +99,61 @@ function chunks(value: unknown, field: string, max: number): Chunkish[] {
   });
 }
 
+/** Document texts for the batch embedding mode. Truncated, not rejected. */
+function documents(value: unknown): string[] {
+  if (!Array.isArray(value)) throw new BadRequest('texts must be an array');
+  if (value.length === 0) throw new BadRequest('texts must not be empty');
+  if (value.length > LIMITS.documents) {
+    throw new BadRequest(`texts must hold at most ${LIMITS.documents} items`);
+  }
+
+  return value.map((item, i) => {
+    if (typeof item !== 'string' || item.trim() === '') {
+      throw new BadRequest(`texts[${i}] must be a non-empty string`);
+    }
+    return item.slice(0, LIMITS.chunkChars);
+  });
+}
+
 // ── embedding ───────────────────────────────────────────────────────────────
 
-export async function embed(query: string, env: Env): Promise<number[]> {
+async function runEmbedding(texts: string[], env: Env): Promise<number[][]> {
   if (!env.AI) throw new Error('no Workers AI binding');
 
-  const result = (await env.AI.run(EMBEDDING_MODEL, { text: [QUERY_PREFIX + query] })) as {
-    data?: number[][];
-  };
-  const vector = result?.data?.[0];
-  if (!vector || vector.length !== EMBEDDING_DIMS) {
-    throw new Error(`embedding returned ${vector?.length ?? 0} dimensions, expected ${EMBEDDING_DIMS}`);
+  const result = (await env.AI.run(EMBEDDING_MODEL, { text: texts })) as { data?: number[][] };
+  const vectors = result?.data;
+
+  if (!Array.isArray(vectors) || vectors.length !== texts.length) {
+    throw new Error(`embedding returned ${vectors?.length ?? 0} vectors for ${texts.length} texts`);
   }
-  return vector;
+  for (const vector of vectors) {
+    // A silently short vector would corrupt every cosine in the index.
+    if (vector?.length !== EMBEDDING_DIMS) {
+      throw new Error(`embedding returned ${vector?.length ?? 0} dimensions, expected ${EMBEDDING_DIMS}`);
+    }
+  }
+  return vectors;
+}
+
+/** One query, carrying the instruction prefix bge-v1.5 expects. */
+export async function embed(query: string, env: Env): Promise<number[]> {
+  return (await runEmbedding([QUERY_PREFIX + query], env))[0]!;
+}
+
+/**
+ * Documents, deliberately without the prefix.
+ *
+ * bge-v1.5 is asymmetric: prefixing a document puts it in the query's space and
+ * quietly costs recall. Keeping the two modes as separate shapes — `query` for
+ * one, `texts` for many — means a caller cannot pick the wrong one by accident.
+ *
+ * This exists so the build-time ingest can index the corpus through the binding
+ * rather than needing a second credential. It does widen what the worker will
+ * do for an anonymous caller; the batch cap, the per-text cap and the per-IP
+ * rate limit are what bound that.
+ */
+export async function embedDocuments(texts: string[], env: Env): Promise<number[][]> {
+  return runEmbedding(texts, env);
 }
 
 // ── reranking ───────────────────────────────────────────────────────────────
@@ -154,6 +202,34 @@ export async function rerank(
   }
 }
 
+/**
+ * The generation key, trimmed.
+ *
+ * A secret pasted into a form or piped from a file arrives with a trailing
+ * newline more often than not, and whitespace in a header value is rejected
+ * before the request reaches anyone who could explain why.
+ */
+const apiKey = (env: Env): string | undefined => env.GEMINI_API_KEY?.trim() || undefined;
+
+/**
+ * The upstream's own words, not just its status code.
+ *
+ * "generation returned 400" says a request was malformed without saying which
+ * part, which is the difference between a five-minute fix and an afternoon of
+ * guessing. The message is truncated and carries no request content, so a
+ * degraded reason shown in the UI cannot leak a key or a prompt.
+ */
+async function upstreamError(response: Response, stage: string): Promise<string> {
+  let detail = '';
+  try {
+    const body = (await response.json()) as { error?: { message?: string; status?: string } };
+    detail = body.error?.message ?? body.error?.status ?? '';
+  } catch {
+    // A non-JSON error body tells us nothing worth surfacing.
+  }
+  return `${stage} returned ${response.status}${detail ? `: ${detail.slice(0, 300)}` : ''}`;
+}
+
 // ── generation ──────────────────────────────────────────────────────────────
 
 const SYSTEM_PROMPT = `You answer questions about web accessibility using only the sources provided.
@@ -180,7 +256,8 @@ export type AnswerResult = ParsedAnswer | { degraded: { reason: string } };
  * answer and never an empty one dressed up as a refusal.
  */
 export async function answer(question: string, sources: Chunkish[], env: Env): Promise<AnswerResult> {
-  if (!env.GEMINI_API_KEY) return { degraded: { reason: 'no generation key configured' } };
+  const key = apiKey(env);
+  if (!key) return { degraded: { reason: 'no generation key configured' } };
 
   const model = env.GEMINI_MODEL ?? 'gemini-2.5-flash';
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
@@ -188,7 +265,7 @@ export async function answer(question: string, sources: Chunkish[], env: Env): P
   try {
     const response = await fetch(url, {
       method: 'POST',
-      headers: { 'content-type': 'application/json', 'x-goog-api-key': env.GEMINI_API_KEY },
+      headers: { 'content-type': 'application/json', 'x-goog-api-key': key },
       body: JSON.stringify({
         systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
         contents: [{ parts: [{ text: `${sourceBlock(sources)}\n\nQuestion: ${question}` }] }],
@@ -200,9 +277,7 @@ export async function answer(question: string, sources: Chunkish[], env: Env): P
       }),
     });
 
-    if (!response.ok) {
-      return { degraded: { reason: `generation returned ${response.status}` } };
-    }
+    if (!response.ok) return { degraded: { reason: await upstreamError(response, 'generation') } };
 
     const body = (await response.json()) as {
       candidates?: { content?: { parts?: { text?: string }[] } }[];
@@ -241,7 +316,8 @@ const pairBlock = (pairs: EntailmentPair[]) =>
  */
 export async function entail(pairs: EntailmentPair[], env: Env): Promise<(number | null)[]> {
   const unjudged = () => pairs.map(() => null);
-  if (!env.GEMINI_API_KEY) return unjudged();
+  const key = apiKey(env);
+  if (!key) return unjudged();
 
   const model = env.GEMINI_MODEL ?? 'gemini-2.5-flash';
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
@@ -249,7 +325,7 @@ export async function entail(pairs: EntailmentPair[], env: Env): Promise<(number
   try {
     const response = await fetch(url, {
       method: 'POST',
-      headers: { 'content-type': 'application/json', 'x-goog-api-key': env.GEMINI_API_KEY },
+      headers: { 'content-type': 'application/json', 'x-goog-api-key': key },
       body: JSON.stringify({
         systemInstruction: { parts: [{ text: ENTAILMENT_PROMPT }] },
         contents: [{ parts: [{ text: pairBlock(pairs) }] }],
@@ -260,7 +336,10 @@ export async function entail(pairs: EntailmentPair[], env: Env): Promise<(number
         },
       }),
     });
-    if (!response.ok) return unjudged();
+    if (!response.ok) {
+      console.error(await upstreamError(response, 'entailment'));
+      return unjudged();
+    }
 
     const body = (await response.json()) as {
       candidates?: { content?: { parts?: { text?: string }[] } }[];
@@ -330,6 +409,10 @@ export async function handle(request: Request, env: Env): Promise<Response> {
   try {
     switch (pathname) {
       case '/embed': {
+        if (input['texts'] !== undefined) {
+          const texts = documents(input['texts']);
+          return json({ vectors: await embedDocuments(texts, env), dims: EMBEDDING_DIMS });
+        }
         const query = text(input['query'], 'query', LIMITS.query);
         return json({ vector: await embed(query, env), dims: EMBEDDING_DIMS });
       }

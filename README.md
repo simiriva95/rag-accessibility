@@ -6,10 +6,8 @@ happens and **every quoted claim is checked against the text it cites** — not 
 [Ablation](docs/ABLATION.md) · [Guida in italiano](docs/GUIDA.md) · *demo link goes here once the
 worker is deployed*
 
-> **Status.** Retrieval, verification, evaluation, the edge worker and the UI are built and tested
-> (206 tests). The dense half of retrieval and the generated answer need Cloudflare and Gemini
-> credentials, which are not yet configured — so three rows of the ablation table below are empty
-> and say why. Nothing in this README reports a number that was not measured.
+> **Status.** Everything runs. The worker is deployed, the corpus is embedded, and every number
+> below was measured on this corpus. What is missing is a public demo link and a GIF.
 
 ---
 
@@ -23,23 +21,30 @@ context scores 1.
 | Retriever | Recall@5 | Recall@10 | Recall@30 | Success@5 | nDCG@10 | MRR |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
 | BM25 only | 40.5% | 59.2% | 78.2% | 68.6% | 0.466 | 0.514 |
-| Dense only | — | — | — | — | — | — |
-| Hybrid (RRF) | — | — | — | — | — | — |
-| Hybrid + rerank | — | — | — | — | — | — |
+| Dense only | 44.0% | 63.8% | 79.7% | 65.7% | 0.504 | 0.541 |
+| Hybrid (RRF) | 53.6% | 66.9% | **85.1%** | 82.9% | **0.534** | 0.601 |
+| Hybrid + rerank | **63.7%** | **67.1%** | 66.6%\* | **97.1%** | 0.519\* | **0.739** |
 
-*Dense and hybrid need `data/index/vectors.bin`, which needs Workers AI credentials. The reranker
-needs the worker deployed.*
+\* *The reranked row returns 8 results, not 30, so those two columns are bounded by the cut rather
+than by the reranker. Recall@5, Success@5 and MRR compare like with like.*
 
 ### Recall@10 by question kind — the interesting half
 
 | Retriever | identifier (12) | conceptual (17) | design (6) |
 | --- | ---: | ---: | ---: |
-| BM25 only | **66.5%** | **47.3%** | 78.3% |
+| BM25 only | **66.5%** | 47.3% | 78.3% |
+| Dense only | 50.6% | **66.3%** | 83.5% |
+| Hybrid (RRF) | 65.8% | 60.8% | **86.3%** |
+| Hybrid + rerank | **73.7%** | 62.4% | 67.6% |
 
-That gap is the whole argument for hybrid search, and it is visible before a single embedding has
-been computed. BM25 is good at `2.4.11`, `aria-describedby` and `4.5:1`, and noticeably worse at
-"how much colour contrast does large text need". Dense retrieval is the mirror image. The ablation
-will either show the gap closing or show the premise was wrong — both are results.
+**This is the whole argument, and it held.** BM25 is strong on identifiers (`2.4.11`,
+`aria-describedby`, `4.5:1`) and weak on paraphrase. Dense retrieval is the mirror image — almost
+exactly so: 66.5/47.3 against 50.6/66.3. Neither is good at both.
+
+Fusing them keeps nearly all of BM25's identifier performance *and* most of dense's conceptual
+performance, and the headline effect is on whether anything useful reaches the top at all:
+**Success@5 goes from 68.6% and 65.7% alone to 82.9% fused, and 97.1% after reranking.** MRR — how
+far down the first right answer sits — goes from 0.514 to 0.739.
 
 ---
 

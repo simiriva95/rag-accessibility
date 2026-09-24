@@ -19,7 +19,7 @@ import {
   type Chunk,
   type Scored,
 } from '@rag/core';
-import { credentialsFromEnv, embedQuery } from './embed.ts';
+import { backendFromEnv, embedQuery } from './embed.ts';
 
 const ROOT = resolve(import.meta.dirname, '../../..');
 const INDEX = join(ROOT, 'data/index');
@@ -58,7 +58,7 @@ try {
   const vectors = decodeDenseVectors(
     buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength) as ArrayBuffer,
   );
-  const [embedded, embedMs] = await timed(() => embedQuery(query, credentialsFromEnv()));
+  const [embedded, embedMs] = await timed(() => embedQuery(query, backendFromEnv()));
   const [hits, scanMs] = await timed(() =>
     searchDense({ ...vectors, docIds: chunks.map((c) => c.id) }, embedded, CANDIDATES),
   );

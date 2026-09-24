@@ -8,7 +8,7 @@ import {
   type NormalizedDoc,
 } from '@rag/core';
 import { chunkDocument } from './chunk.ts';
-import { EMBEDDING_DIMS, credentialsFromEnv, documentText, embedTexts } from './embed.ts';
+import { EMBEDDING_DIMS, backendFromEnv, documentText, embedTexts } from './embed.ts';
 import { normalizeHtml } from './normalize.ts';
 
 const ROOT = resolve(import.meta.dirname, '../../..');
@@ -81,9 +81,9 @@ async function govukDocs(): Promise<NormalizedDoc[]> {
  * re-embedding the whole corpus each time would waste most of the quota.
  */
 async function embedChunks(chunks: Chunk[]): Promise<Float32Array[] | undefined> {
-  let credentials;
+  let backend;
   try {
-    credentials = credentialsFromEnv();
+    backend = backendFromEnv();
   } catch (error) {
     process.stderr.write(`\nSkipping embeddings — ${(error as Error).message}\n`);
     return undefined;
@@ -96,8 +96,11 @@ async function embedChunks(chunks: Chunk[]): Promise<Float32Array[] | undefined>
 
   const missing = chunks.filter((c) => cache[c.id] === undefined);
   if (missing.length > 0) {
-    process.stderr.write(`embedding ${missing.length} chunks (${chunks.length - missing.length} cached)\n`);
-    const vectors = await embedTexts(missing.map(documentText), credentials, (done, total) =>
+    process.stderr.write(
+      `embedding ${missing.length} chunks via ${backend.kind} ` +
+        `(${chunks.length - missing.length} cached)\n`,
+    );
+    const vectors = await embedTexts(missing.map(documentText), backend, (done, total) =>
       process.stderr.write(`  ${done}/${total}\r`),
     );
     for (const [i, chunk] of missing.entries()) cache[chunk.id] = [...vectors[i]!];

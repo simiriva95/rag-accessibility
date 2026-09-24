@@ -5,6 +5,7 @@ import {
   RERANKER_MODEL,
   answer,
   embed,
+  embedDocuments,
   entail,
   handle,
   rerank,
@@ -53,11 +54,34 @@ describe('embed', () => {
   it('rejects a vector of the wrong width instead of returning it', async () => {
     // A silently short vector would corrupt every cosine in the index.
     await expect(embed('q', { AI: aiReturning({ data: [vector(128)] }) })).rejects.toThrow(/128 dimensions/);
-    await expect(embed('q', { AI: aiReturning({}) })).rejects.toThrow(/0 dimensions/);
+    await expect(embed('q', { AI: aiReturning({}) })).rejects.toThrow(/0 vectors for 1 texts/);
   });
 
   it('fails when there is no binding, because there is no fallback', async () => {
     await expect(embed('q', {})).rejects.toThrow(/no Workers AI binding/);
+  });
+});
+
+describe('embedDocuments', () => {
+  it('sends the documents unprefixed, unlike a query', async () => {
+    const run = vi.fn(async () => ({ data: [vector(), vector()] }));
+    await embedDocuments(['first chunk', 'second chunk'], { AI: { run } });
+
+    // Prefixing a document puts it in the query's space and costs recall.
+    expect(run).toHaveBeenCalledWith(EMBEDDING_MODEL, { text: ['first chunk', 'second chunk'] });
+  });
+
+  it('refuses a short batch rather than misaligning vectors with chunks', async () => {
+    // One vector for two texts would pair every later chunk with the wrong one.
+    await expect(
+      embedDocuments(['a', 'b'], { AI: aiReturning({ data: [vector()] }) }),
+    ).rejects.toThrow(/1 vectors for 2 texts/);
+  });
+
+  it('refuses a vector of the wrong width', async () => {
+    await expect(
+      embedDocuments(['a'], { AI: aiReturning({ data: [vector(128)] }) }),
+    ).rejects.toThrow(/128 dimensions/);
   });
 });
 
@@ -262,6 +286,24 @@ describe('handle', () => {
   it('rejects anything but POST, and unknown paths', async () => {
     expect((await handle(new Request('https://worker.test/embed'), {})).status).toBe(405);
     expect((await handle(post('/nope', {}), {})).status).toBe(404);
+  });
+
+  it('routes to the document mode when texts are given, not a query', async () => {
+    const run = vi.fn(async (_model: string, _input: unknown) => ({ data: [vector(), vector()] }));
+    const response = await handle(post('/embed', { texts: ['one', 'two'] }), { AI: { run } });
+
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as { vectors: number[][]; dims: number };
+    expect(body.vectors).toHaveLength(2);
+    expect(body.dims).toBe(EMBEDDING_DIMS);
+    expect(run).toHaveBeenCalledWith(EMBEDDING_MODEL, { text: ['one', 'two'] });
+  });
+
+  it('caps a document batch so one call cannot embed the world', async () => {
+    const many = Array.from({ length: 101 }, (_, i) => `chunk ${i}`);
+    expect((await handle(post('/embed', { texts: many }), {})).status).toBe(400);
+    expect((await handle(post('/embed', { texts: [] }), {})).status).toBe(400);
+    expect((await handle(post('/embed', { texts: ['ok', 42] }), {})).status).toBe(400);
   });
 
   it('validates input before spending quota', async () => {
