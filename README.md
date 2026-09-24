@@ -183,6 +183,18 @@ a verdict, a rate limit is not.
 **Unsupported sentences are shown, not hidden.** Hiding them would make this a demonstration that
 the model never fails, which is not the claim.
 
+### When the model is simply busy
+
+A free tier answers *"this model is currently experiencing high demand"* on an ordinary afternoon,
+and a demo that has to keep working for years cannot rest on one model staying uncongested. So
+generation tries a short chain of models and retries the ones that are merely busy — 429 and 503
+mean *not now*, not *no*. The waits are small, because this runs inside a request someone is
+waiting on. A refusal that will not change, like a bad key, moves straight on rather than being
+asked again.
+
+A worse model is still a worse answer, not a wrong one: the verification layer judges whichever
+model replied by exactly the same rule.
+
 ---
 
 ## The ablation

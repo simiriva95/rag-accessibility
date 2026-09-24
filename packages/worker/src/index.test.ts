@@ -8,6 +8,7 @@ import {
   embedDocuments,
   entail,
   handle,
+  modelsOf,
   rerank,
   type Ai,
   type Env,
@@ -172,6 +173,43 @@ describe('answer', () => {
     vi.unstubAllGlobals();
   });
 
+  it('retries a busy model, then moves to the next one', async () => {
+    const tried: string[] = [];
+    const fetchMock = vi.fn(async (url: unknown) => {
+      const model = String(url).match(/models\/([^:]+):/)?.[1] ?? '?';
+      tried.push(model);
+      // The first model is busy however often it is asked; the second answers.
+      if (tried.filter((m) => m === model).length <= 3 && model === 'busy') {
+        return new Response(JSON.stringify({ error: { message: 'high demand' } }), { status: 503 });
+      }
+      return new Response(
+        JSON.stringify({ candidates: [{ content: { parts: [{ text: JSON.stringify(payload) }] } }] }),
+      );
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await answer('q', candidates, { GEMINI_API_KEY: 'k', GEMINI_MODEL: 'busy, spare' });
+
+    expect('answer' in result).toBe(true);
+    expect(tried.filter((m) => m === 'busy')).toHaveLength(3); // tried, then retried twice
+    expect(tried.at(-1)).toBe('spare');
+    vi.unstubAllGlobals();
+  }, 20_000);
+
+  it('does not retry a refusal that will not change', async () => {
+    const fetchMock = vi.fn(
+      async () => new Response(JSON.stringify({ error: { message: 'API key not valid' } }), { status: 400 }),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await answer('q', candidates, { GEMINI_API_KEY: 'k', GEMINI_MODEL: 'one, two' });
+
+    // One attempt per model: a bad key is not going to become a good one.
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect('degraded' in result && result.degraded.reason).toMatch(/API key not valid/);
+    vi.unstubAllGlobals();
+  });
+
   it('degrades rather than inventing when generation is unavailable', async () => {
     expect(await answer('q', candidates, {})).toEqual({
       degraded: { reason: 'no generation key configured' },
@@ -208,8 +246,10 @@ describe('answer', () => {
 });
 
 describe('entail', () => {
+  // 400, not 429: a 429 is now retried across the whole model chain, which is
+  // the behaviour covered separately under `answer`.
   const verdicts = (body: unknown, ok = true) =>
-    vi.fn(async () => new Response(JSON.stringify(body), { status: ok ? 200 : 429 }));
+    vi.fn(async () => new Response(JSON.stringify(body), { status: ok ? 200 : 400 }));
 
   const pairs = [
     { sentence: 'Focus must stay visible.', evidence: 'The component is not entirely hidden.' },
@@ -271,6 +311,24 @@ describe('entail', () => {
     expect(prompt).toContain('<pair index="1">');
     expect(sent.generationConfig.responseSchema.required).toContain('verdicts');
     vi.unstubAllGlobals();
+  });
+});
+
+describe('modelsOf', () => {
+  it('falls back to the default chain when nothing is configured', () => {
+    // An empty array is truthy: `|| DEFAULT` would leave the list empty.
+    expect(modelsOf({})).toContain('gemini-2.5-flash');
+    expect(modelsOf({ GEMINI_MODEL: '' })).toContain('gemini-2.5-flash');
+    expect(modelsOf({ GEMINI_MODEL: ' , ' })).toContain('gemini-2.5-flash');
+  });
+
+  it('takes a comma-separated list in order', () => {
+    expect(modelsOf({ GEMINI_MODEL: 'a, b ,c' })).toEqual(['a', 'b', 'c']);
+  });
+
+  it('offers more than one model by default', () => {
+    // A free tier answers "high demand" on an ordinary afternoon.
+    expect(modelsOf({}).length).toBeGreaterThan(1);
   });
 });
 

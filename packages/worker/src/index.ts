@@ -54,8 +54,30 @@ export type Env = {
   AI?: Ai;
   RATE_LIMITER?: RateLimiter;
   GEMINI_API_KEY?: string;
+  /** Comma-separated, tried in order. The first that answers wins. */
   GEMINI_MODEL?: string;
 };
+
+/**
+ * Generation models, in preference order.
+ *
+ * More than one because a free tier answers "this model is currently
+ * experiencing high demand" on an ordinary afternoon, and a demo that has to
+ * keep working for years cannot rest on a single model staying popular and
+ * uncongested. The fallback is smaller and faster; a worse answer beats no
+ * answer, and the verification layer judges either the same way.
+ */
+const DEFAULT_MODELS = ['gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-2.0-flash'];
+
+export function modelsOf(env: Env): string[] {
+  const configured = (env.GEMINI_MODEL ?? '')
+    .split(',')
+    .map((name) => name.trim())
+    .filter(Boolean);
+  // An empty array is truthy, so `|| DEFAULT_MODELS` would have silently left
+  // the list empty and reported that no model was tried.
+  return configured.length > 0 ? configured : DEFAULT_MODELS;
+}
 
 export type Chunkish = { id: string; text: string };
 
@@ -212,6 +234,46 @@ export async function rerank(
 const apiKey = (env: Env): string | undefined => env.GEMINI_API_KEY?.trim() || undefined;
 
 /**
+ * Asks each model in turn, retrying the ones that are merely busy.
+ *
+ * 429 and 503 mean "not now", not "no" — a single attempt turns a passing
+ * spike into a visible failure. Two short retries, then the next model. The
+ * waits are deliberately small: this runs inside a request someone is waiting
+ * on, so the budget is a few seconds, not the minute an offline ingest can
+ * afford.
+ */
+async function generateWith(
+  env: Env,
+  key: string,
+  body: (model: string) => unknown,
+): Promise<{ response: Response; model: string } | { failed: string }> {
+  let last = 'no model was tried';
+
+  for (const model of modelsOf(env)) {
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
+        {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', 'x-goog-api-key': key },
+          body: JSON.stringify(body(model)),
+        },
+      );
+
+      if (response.ok) return { response, model };
+
+      const busy = response.status === 429 || response.status === 503;
+      last = await upstreamError(response, 'generation');
+      if (!busy) break; // a real refusal: try the next model rather than repeat
+
+      if (attempt < 2) await new Promise((r) => setTimeout(r, 2 ** attempt * 800));
+    }
+  }
+
+  return { failed: last };
+}
+
+/**
  * The upstream's own words, not just its status code.
  *
  * "generation returned 400" says a request was malformed without saying which
@@ -259,25 +321,19 @@ export async function answer(question: string, sources: Chunkish[], env: Env): P
   const key = apiKey(env);
   if (!key) return { degraded: { reason: 'no generation key configured' } };
 
-  const model = env.GEMINI_MODEL ?? 'gemini-2.5-flash';
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
-
   try {
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', 'x-goog-api-key': key },
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
-        contents: [{ parts: [{ text: `${sourceBlock(sources)}\n\nQuestion: ${question}` }] }],
-        generationConfig: {
-          responseMimeType: 'application/json',
-          responseSchema: ANSWER_SCHEMA,
-          temperature: 0,
-        },
-      }),
-    });
+    const attempt = await generateWith(env, key, () => ({
+      systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
+      contents: [{ parts: [{ text: `${sourceBlock(sources)}\n\nQuestion: ${question}` }] }],
+      generationConfig: {
+        responseMimeType: 'application/json',
+        responseSchema: ANSWER_SCHEMA,
+        temperature: 0,
+      },
+    }));
 
-    if (!response.ok) return { degraded: { reason: await upstreamError(response, 'generation') } };
+    if ('failed' in attempt) return { degraded: { reason: attempt.failed } };
+    const { response } = attempt;
 
     const body = (await response.json()) as {
       candidates?: { content?: { parts?: { text?: string }[] } }[];
@@ -319,27 +375,22 @@ export async function entail(pairs: EntailmentPair[], env: Env): Promise<(number
   const key = apiKey(env);
   if (!key) return unjudged();
 
-  const model = env.GEMINI_MODEL ?? 'gemini-2.5-flash';
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
-
   try {
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', 'x-goog-api-key': key },
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: ENTAILMENT_PROMPT }] },
-        contents: [{ parts: [{ text: pairBlock(pairs) }] }],
-        generationConfig: {
-          responseMimeType: 'application/json',
-          responseSchema: ENTAILMENT_SCHEMA,
-          temperature: 0,
-        },
-      }),
-    });
-    if (!response.ok) {
-      console.error(await upstreamError(response, 'entailment'));
+    const attempt = await generateWith(env, key, () => ({
+      systemInstruction: { parts: [{ text: ENTAILMENT_PROMPT }] },
+      contents: [{ parts: [{ text: pairBlock(pairs) }] }],
+      generationConfig: {
+        responseMimeType: 'application/json',
+        responseSchema: ENTAILMENT_SCHEMA,
+        temperature: 0,
+      },
+    }));
+
+    if ('failed' in attempt) {
+      console.error(attempt.failed);
       return unjudged();
     }
+    const { response } = attempt;
 
     const body = (await response.json()) as {
       candidates?: { content?: { parts?: { text?: string }[] } }[];

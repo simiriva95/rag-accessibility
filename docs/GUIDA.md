@@ -1068,6 +1068,26 @@ Delega al nuovo percorso Workers, che esegue `npm install` e si strozza sul prot
 `workspace:*`. Serve `--force` **una volta sola** per creare il progetto; dopo, i comandi normali
 funzionano.
 
+### Un solo modello non basta
+
+Aprendo la demo dopo il deploy: `503 — This model is currently experiencing high demand`. Non uno
+spike: tre tentativi, tre 503. Su un free tier capita in un pomeriggio qualunque.
+
+La modalità degradata ha funzionato — banner col messaggio di Google parola per parola, fonti
+comunque mostrate. Ma il vincolo del brief è che la demo regga **negli anni**, e dipendere da un
+solo modello non lo soddisfa.
+
+Ora la generazione prova una **catena di modelli** e ritenta quelli solo occupati: `429` e `503`
+vogliono dire *non adesso*, non *no*. Le attese sono corte, perché si è dentro una richiesta che
+qualcuno sta aspettando. Un rifiuto che non cambierà — una chiave sbagliata — passa direttamente al
+modello successivo invece di essere richiesto.
+
+Un modello peggiore dà una risposta peggiore, non sbagliata: **il verificatore giudica allo stesso
+modo chiunque abbia risposto.**
+
+Un bug scritto e corretto nello stesso momento: `[] || DEFAULT_MODELS` restituisce `[]`, perché un
+array vuoto è *truthy*. Senza configurazione non avrebbe provato nessun modello.
+
 ### Il 522 transitorio
 
 Subito dopo il deploy, `vectors.bin` rispondeva 522. Tre tentativi dopo: 200, 617.708 byte in
