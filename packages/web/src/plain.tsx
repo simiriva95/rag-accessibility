@@ -46,11 +46,21 @@ export function tokenizePlain({ run }: Ctx): Plain {
     </>,
   ];
   if (rare && common && rare !== common) {
+    // "Everywhere" only when it is: a word in 29 of 1,592 chunks is rare too, just less rare.
+    const everywhere = df.get(common)! / total > 0.2;
     yours.push(
-      <>
-        Some cards are everywhere: {word(common)} is in {n(df.get(common)!)} of the {n(total)} chunks, so finding it
-        tells us very little. Some are rare: {word(rare)} is in only {n(df.get(rare)!)}, so finding it is a strong clue.
-      </>,
+      everywhere ? (
+        <>
+          Some cards are everywhere: {word(common)} is in {n(df.get(common)!)} of the {n(total)} chunks, so finding it
+          tells us very little. Some are rare: {word(rare)} is in only {n(df.get(rare)!)}, so finding it is a strong clue.
+        </>
+      ) : (
+        <>
+          All your cards are fairly rare, which makes them good clues. The rarest, {word(rare)}, is in only{' '}
+          {n(df.get(rare)!)} of the {n(total)} chunks; the most common, {word(common)}, is in {n(df.get(common)!)}. The
+          rarer the card, the more a match counts.
+        </>
+      ),
     );
   }
   if (missing.length > 0) {
@@ -113,7 +123,7 @@ export function bm25Plain({ run, title }: Ctx): Plain {
       yours.push(
         <>
           {word(weak.term)} is in the chunk too, but it is in {n(weak.df)} chunks overall, so it was worth only{' '}
-          {weak.score.toFixed(2)}. Common words are weak evidence.
+          {weak.score.toFixed(2)}. The more chunks a word is in, the less it proves.
         </>,
       );
     }
