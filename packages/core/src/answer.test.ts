@@ -100,6 +100,30 @@ describe('citation markers in sentences', () => {
   });
 });
 
+describe('sentences ordered by conformance level', () => {
+  const sentences = (list: string[]) =>
+    parseModelAnswer({
+      answerable: true,
+      sentences: list,
+      claims: list.map((_, i) => ({ sentenceIndex: i, chunkIds: ['c'], quote: 'q' })),
+    }).answer;
+
+  it('puts AA before AAA and keeps each claim on its own sentence', () => {
+    const answer = sentences([
+      'Large text needs 4.5:1 at Level AAA (1.4.6).',
+      'Large text needs 3:1 at Level AA (1.4.3).',
+    ]);
+    expect(answer.sentences).toEqual(['Large text needs 3:1 at Level AA (1.4.3).', 'Large text needs 4.5:1 at Level AAA (1.4.6).']);
+    for (const claim of answer.claims) expect(answer.sentences).toContain(claim.sentence);
+    expect(answer.claims[0]!.sentence).toBe('Large text needs 4.5:1 at Level AAA (1.4.6).');
+  });
+
+  it('leaves sentences that name no level where they were', () => {
+    const answer = sentences(['Contrast is measured between text and background.', 'AAA asks 7:1.', 'AA asks 4.5:1.', 'That is all.']);
+    expect(answer.sentences).toEqual(['Contrast is measured between text and background.', 'AA asks 4.5:1.', 'AAA asks 7:1.', 'That is all.']);
+  });
+});
+
 describe('ANSWER_SCHEMA', () => {
   it('requires exactly the fields the parser requires', () => {
     expect([...ANSWER_SCHEMA.required]).toEqual(['answerable', 'sentences', 'claims']);

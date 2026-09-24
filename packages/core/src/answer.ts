@@ -110,7 +110,7 @@ export function parseModelAnswer(raw: unknown): ParsedAnswer {
     });
   }
 
-  return { answer: { answerable: raw['answerable'], sentences, claims }, dropped };
+  return { answer: { answerable: raw['answerable'], sentences: byLevel(sentences), claims }, dropped };
 }
 
 /**
@@ -127,6 +127,32 @@ const stripMarkers = (sentence: string): string => {
   while (MARKER.test(out)) out = out.replace(MARKER, '');
   return out;
 };
+
+const LEVEL_RANK: Record<string, number> = { A: 0, AA: 1, AAA: 2 };
+
+/** The lowest conformance level a sentence names, if it names one. */
+const levelRank = (sentence: string): number | undefined => {
+  const ranks = [...sentence.matchAll(/\bLevel\s+(A{1,3})\b|\b(AAA?)\b/g)].map((m) => LEVEL_RANK[m[1] ?? m[2]!]!);
+  return ranks.length > 0 ? Math.min(...ranks) : undefined;
+};
+
+/**
+ * Sentences that state a requirement at a conformance level, reordered from
+ * the lowest level up — A, then AA, then AAA — within the slots they already
+ * occupy. Every other sentence keeps its place, so the prose around them is
+ * untouched. AA is the level most requirements are held to, so it is what a
+ * reader should meet first; a model asked for that order does not reliably
+ * give it. Claims refer to their sentence by text, so reordering cannot
+ * detach one.
+ */
+function byLevel(sentences: string[]): string[] {
+  const slots = sentences.flatMap((sentence, i) => (levelRank(sentence) !== undefined ? [i] : []));
+  if (slots.length < 2) return sentences;
+  const ordered = slots.map((i) => sentences[i]!).sort((a, b) => levelRank(a)! - levelRank(b)!);
+  const out = [...sentences];
+  slots.forEach((slot, n) => (out[slot] = ordered[n]!));
+  return out;
+}
 
 function claimProblem(candidate: unknown, sentenceCount: number): string | undefined {
   if (!isRecord(candidate)) return 'not an object';
