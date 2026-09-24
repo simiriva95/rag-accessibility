@@ -12,7 +12,7 @@ import {
   rerank,
   type Ai,
   type Env,
-} from './index.ts';
+} from './worker.ts';
 
 /**
  * The bindings are stubbed rather than emulated. What is worth testing here is

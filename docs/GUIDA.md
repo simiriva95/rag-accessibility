@@ -631,7 +631,7 @@ controllo 1 da solo, ed è il punto — il controllo economico regge quasi tutto
 
 ---
 
-## 15. Il Cloudflare Worker — `packages/worker/src/index.ts`
+## 15. Il Cloudflare Worker — `packages/worker/src/worker.ts`
 
 
 Le tre cose che non si possono precalcolare. Tutto il resto è un file statico.

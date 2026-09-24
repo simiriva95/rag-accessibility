@@ -9,7 +9,7 @@
  * Nothing is illustrative.
  */
 
-/** Mirrors packages/worker/src/index.ts. The web package does not depend on the worker. */
+/** Mirrors packages/worker/src/worker.ts. The web package does not depend on the worker. */
 export const MODELS = {
   embedding: '@cf/baai/bge-small-en-v1.5',
   reranker: '@cf/baai/bge-reranker-base',
