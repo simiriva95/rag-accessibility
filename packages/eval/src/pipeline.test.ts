@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseModelAnswer, verifyClaims, type Chunk, type EntailmentJudge } from '@rag/core';
+import { levelOf, parseModelAnswer, verifyClaims, type Chunk, type EntailmentJudge } from '@rag/core';
 import { citationMetrics } from './citation.ts';
 import { loadChunks } from './resolve.ts';
 
@@ -31,7 +31,12 @@ describe('the answer pipeline over real chunks', () => {
   it('carries an honest answer through to verified citations with spans', async () => {
     const { answer, dropped } = parseModelAnswer({
       answerable: true,
-      sentences: sources.map((_, i) => `Sentence ${i} about accessibility.`),
+      // An honest sentence names the level its source states; one that did not
+      // would be held at partial (see verify.test.ts).
+      sentences: sources.map((source, i) => {
+        const level = levelOf(source);
+        return `Sentence ${i} about accessibility${level ? ` at Level ${level}` : ''}.`;
+      }),
       claims: sources.map((source, i) => ({
         sentenceIndex: i,
         chunkIds: [source.id],

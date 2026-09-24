@@ -54,6 +54,11 @@ export type VerifiedClaim = Claim & {
   /** null when the judge could not be reached, which is not the same as zero. */
   entailment: number | null;
   status: ClaimStatus;
+  /**
+   * The conformance level the evidence states and the sentence leaves out,
+   * when that is what kept a claim from 'verified'. See levelOmitted.
+   */
+  levelOmitted?: 'A' | 'AA' | 'AAA';
 };
 
 export type EntailmentPair = { sentence: string; evidence: string };
@@ -245,15 +250,56 @@ export async function verifyClaims(
       return { ...claim, quoteMatch: false, supportingChunkIds, entailment: 0, status: 'unsupported' };
     }
     const entailment = scoreByIndex.get(index) ?? null;
+    const status = statusFor(entailment, verifiedAt, partialAt);
+    const level = levelOf(first.chunk);
+    // A threshold stated without its level is true of one level and false of
+    // the others. The quote holds, so it is partial rather than unsupported.
+    if (status === 'verified' && level && !namesLevel(claim.sentence, first.chunk, level)) {
+      return {
+        ...claim,
+        quoteMatch: true,
+        supportingChunkIds,
+        span: { chunkId: first.chunkId, ...first.span },
+        entailment,
+        status: 'partial',
+        levelOmitted: level,
+      };
+    }
     return {
       ...claim,
       quoteMatch: true,
       supportingChunkIds,
       span: { chunkId: first.chunkId, ...first.span },
       entailment,
-      status: statusFor(entailment, verifiedAt, partialAt),
+      status,
     };
   });
+}
+
+/**
+ * The conformance level a chunk's requirement is stated at, when it is
+ * stated at exactly one.
+ *
+ * A WCAG threshold means nothing without its level: large text needs 3:1 at
+ * AA and 4.5:1 at AAA, and both sentences quote real text. An LLM judge asked
+ * whether "large text needs 4.5:1" follows from the AAA criterion says yes —
+ * measured, with the rule spelled out in its prompt — so this is checked
+ * deterministically instead. An Understanding page carries its level in its
+ * title; a chunk of the specification carries it in its text, and is only
+ * trusted when it names one level.
+ */
+export function levelOf(chunk: Pick<Chunk, 'docTitle' | 'text'>): 'A' | 'AA' | 'AAA' | undefined {
+  const inTitle = chunk.docTitle.match(/\(Level (A{1,3})\)/)?.[1];
+  if (inTitle) return inTitle as 'A' | 'AA' | 'AAA';
+  const inText = new Set([...chunk.text.matchAll(/\(Level (A{1,3})\)/g)].map((m) => m[1]!));
+  return inText.size === 1 ? ([...inText][0] as 'A' | 'AA' | 'AAA') : undefined;
+}
+
+/** Whether the sentence says which level, or which criterion, it is stating. */
+export function namesLevel(sentence: string, chunk: Pick<Chunk, 'scRef'>, level: string): boolean {
+  // "AA" and "AAA" stand alone; a bare "A" is the article, so it needs "Level".
+  const pattern = level === 'A' ? /\bLevel\s+A\b/ : new RegExp(`\\b${level}\\b`);
+  return pattern.test(sentence) || (chunk.scRef !== undefined && sentence.includes(chunk.scRef));
 }
 
 /** One claim, for callers that have only one. Judged in a batch of one. */

@@ -178,6 +178,8 @@ function Sentence({
   const located = claims.find((claim) => claim.span !== undefined);
   const chunk = located?.span ? chunkFor(located.span.chunkId) : undefined;
   const openable = located?.span !== undefined && chunk !== undefined;
+  // Held at partial because the sentence states a threshold its source ties to a level.
+  const omitted = status === 'partial' ? claims.find((claim) => claim.levelOmitted)?.levelOmitted : undefined;
 
   if (status === 'uncited') return <span>{sentence} </span>;
 
@@ -198,9 +200,15 @@ function Sentence({
         <span className="text-ink">{sentence}</span>
         <span className="sr-only">
           , {label}
+          {omitted ? `. The source states this at Level ${omitted}, and the sentence does not say so` : ''}
           {openable ? '. Select to open the source.' : ''}
         </span>
-      </button>{' '}
+      </button>
+      {omitted && (
+        <span aria-hidden="true" className="ml-1 rounded-md border border-partial px-1.5 py-0.5 align-middle font-mono text-xs text-partial">
+          Level {omitted} not stated
+        </span>
+      )}{' '}
     </>
   );
 }

@@ -199,6 +199,13 @@ judge was available" are different things to show a reader, and collapsing them 
 look like a result. Everywhere a score cannot be obtained the answer is `null`, never `0` — zero is
 a verdict, a rate limit is not.
 
+**A threshold without its level is not verified.** Large text needs 3:1 at Level AA and 4.5:1 at
+AAA, and both sentences quote real text. Asked whether "large text needs 4.5:1" follows from the
+AAA criterion, the LLM judge said yes — even with the rule written into its prompt. So it is
+checked without a model: when the cited chunk states a requirement at one conformance level and the
+sentence names neither that level nor the criterion, the claim is held at `partial`, and the answer
+says which level was left out. The generator is also told to give each level with its criterion.
+
 **Unsupported sentences are shown, not hidden.** Hiding them would make this a demonstration that
 the model never fails, which is not the claim.
 

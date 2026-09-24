@@ -683,7 +683,7 @@ function VerifyStep({ answer, meta }: { answer: AnswerState; meta: Map<string, C
           ],
           [
             'Entailment',
-            `An LLM judge labels each (evidence, sentence) pair supported (1), partially supported (0.5) or not supported (0), in one batched call. Verified at ≥ ${PIPELINE_CONSTANTS.verifiedAt}, partial at ≥ ${PIPELINE_CONSTANTS.partialAt}.`,
+            `An LLM judge labels each (evidence, sentence) pair supported (1), partially supported (0.5) or not supported (0), in one batched call. Verified at ≥ ${PIPELINE_CONSTANTS.verifiedAt}, partial at ≥ ${PIPELINE_CONSTANTS.partialAt}. Then one rule no model is trusted with: a threshold whose source states a conformance level (A, AA, AAA) is held at partial unless the sentence names that level or criterion.`,
           ],
         ].map(([name, text]) => (
           <li key={name} className="rounded-xl bg-raised p-4">
@@ -741,6 +741,7 @@ function VerifyStep({ answer, meta }: { answer: AnswerState; meta: Map<string, C
               <span key="st" className={STATUS[claim.status].className}>
                 <span aria-hidden="true">{STATUS[claim.status].mark} </span>
                 {claim.status}
+                {claim.levelOmitted && `, Level ${claim.levelOmitted} not stated`}
               </span>,
             ])}
           />

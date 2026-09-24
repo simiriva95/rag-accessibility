@@ -237,8 +237,8 @@ export const PARADIGMS: Paradigm[] = [
       'document, and only then an entailment judgement of whether the evidence supports the ' +
       'sentence. It is the “attributable to identified sources” property made operational.',
     formula:
-      'verified ⇔ quote ⊑ chunk ∧ entail(chunk ⇒ sentence) ≥ 0.7\n' +
-      'partial ⇔ quote ⊑ chunk ∧ 0.4 ≤ entail < 0.7\n' +
+      'verified ⇔ quote ⊑ chunk ∧ entail(chunk ⇒ sentence) ≥ 0.7 ∧ level(chunk) named\n' +
+      'partial ⇔ quote ⊑ chunk ∧ (0.4 ≤ entail < 0.7 ∨ level(chunk) not named)\n' +
       'unsupported ⇔ quote ⋢ chunk ∨ entail < 0.4\n' +
       'unverified ⇔ quote ⊑ chunk ∧ judge unavailable',
     cost: 'Substring search in the browser (free), then one batched judge call.',

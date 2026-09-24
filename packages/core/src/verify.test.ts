@@ -1,7 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { Chunk } from './types.ts';
 import {
+  levelOf,
   locateQuote,
+  namesLevel,
   normalizeForMatch,
   statusOf,
   verifyClaim,
@@ -294,5 +296,41 @@ describe('verifyClaim', () => {
     );
     expect(results).toHaveLength(2);
     expect(results.map((r) => r.status)).toEqual(['verified', 'unsupported']);
+  });
+});
+
+describe('conformance level', () => {
+  const aaa = chunk({
+    docTitle: 'Understanding SC 1.4.6 Contrast (Enhanced) (Level AAA)',
+    scRef: '1.4.6',
+    text: 'Large-scale text and images of large-scale text have a contrast ratio of at least 4.5:1;',
+    charStart: 0,
+    charEnd: 89,
+  });
+  const quote = 'Large-scale text and images of large-scale text have a contrast ratio of at least 4.5:1';
+  const verify = (sentence: string) =>
+    verifyClaims([{ sentence, chunkIds: ['c1'], quote }], chunks(aaa), judgeReturning(1)).then((r) => r[0]!);
+
+  it('keeps a threshold stated without its level from being verified', async () => {
+    const result = await verify('Large text needs a contrast ratio of at least 4.5:1.');
+    expect(result.status).toBe('partial');
+    expect(result.levelOmitted).toBe('AAA');
+  });
+
+  it('verifies the same threshold once the level or the criterion is named', async () => {
+    expect((await verify('At Level AAA, large text needs at least 4.5:1.')).status).toBe('verified');
+    expect((await verify('Under 1.4.6, large text needs at least 4.5:1.')).status).toBe('verified');
+  });
+
+  it('does not mistake AA for AAA, or the article for Level A', () => {
+    expect(namesLevel('Level AA asks for 3:1.', {}, 'AAA')).toBe(false);
+    expect(namesLevel('A large text rule.', {}, 'A')).toBe(false);
+    expect(namesLevel('At Level A, captions are required.', {}, 'A')).toBe(true);
+  });
+
+  it('reads the level from the title, or from text that names only one', () => {
+    expect(levelOf(aaa)).toBe('AAA');
+    expect(levelOf({ docTitle: 'WCAG 2.2', text: '1.4.3 Contrast (Minimum) (Level AA) ...' })).toBe('AA');
+    expect(levelOf({ docTitle: 'WCAG 2.2', text: '(Level AA) ... (Level AAA)' })).toBeUndefined();
   });
 });

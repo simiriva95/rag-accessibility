@@ -401,7 +401,8 @@ Rules:
 - For every sentence that states a fact, add a claim citing the sources it came from.
 - "quote" must be copied character for character from one of the chunks you cite. Do not paraphrase it, do not shorten it with an ellipsis, do not join two separate passages. A quote that is not in the source is treated as a fabrication.
 - Prefer a short exact quote over a long approximate one.
-- Do not put source ids or claim numbers inside the sentences. Citations belong in claims only.`;
+- Do not put source ids or claim numbers inside the sentences. Citations belong in claims only.
+- WCAG requirements depend on the conformance level. When the sources give a requirement at more than one level (A, AA, AAA), give each one with its level, starting from the lowest; name the success criterion each comes from. Never state a WCAG threshold without its level.`;
 
 const sourceBlock = (sources: Chunkish[]) =>
   sources.map((source) => `<source id="${source.id}">\n${source.text}\n</source>`).join('\n\n');
@@ -438,8 +439,10 @@ const ENTAILMENT_PROMPT = `You are checking whether a piece of evidence supports
 
 For each numbered pair, return one verdict:
 - supported: the evidence states the claim, or states something the claim follows from directly.
-- partially_supported: the evidence is about the same thing and does not contradict the claim, but does not establish it. Use this when the claim adds a detail, a number or a condition the evidence does not give.
+- partially_supported: the evidence is about the same thing and does not contradict the claim, but does not establish it. Use this when the claim adds a detail, a number or a condition the evidence does not give, or when it drops a condition the evidence attaches — for example a conformance level (AA, AAA) or a scope such as large text.
 - not_supported: the evidence does not establish the claim, or contradicts it.
+
+Conformance levels are part of a WCAG requirement. If the evidence states a requirement at a level (A, AA or AAA) and the claim states that requirement without naming the level, the verdict is partially_supported, never supported: the same number means something different at another level.
 
 Return a verdict for every pair, using its index. Do not explain.`;
 

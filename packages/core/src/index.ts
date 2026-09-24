@@ -22,7 +22,9 @@ export {
 } from './dense.ts';
 export { RRF_K, fuseRrf } from './rrf.ts';
 export {
+  levelOf,
   locateQuote,
+  namesLevel,
   normalizeForMatch,
   statusOf,
   verifyClaim,
