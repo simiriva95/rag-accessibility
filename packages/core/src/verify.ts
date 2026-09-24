@@ -178,13 +178,25 @@ export function locateQuote(quote: string, chunk: Chunk): { start: number; end: 
 }
 
 /** Phase one: which cited chunks hold the quote, and where the first one is. */
+type Located = { chunkId: string; chunk: Chunk; span: { start: number; end: number } };
+
 type QuoteMatch = {
   supportingChunkIds: string[];
-  first?: { chunkId: string; chunk: Chunk; span: { start: number; end: number } };
+  /** Every cited chunk the quote was found in, in citation order. */
+  supporting: Located[];
 };
 
+/**
+ * How many of a claim's supporting chunks the judge reads. The same sentence
+ * can sit in a clean Understanding page and in a slice of the specification
+ * that starts mid-criterion and runs into the next one; judged on the second
+ * alone, a true claim was scored 0. Two keeps the batch inside the worker's
+ * cap for a normal answer.
+ */
+const JUDGED_PER_CLAIM = 2;
+
 function matchQuote(claim: Claim, chunks: ReadonlyMap<string, Chunk>): QuoteMatch {
-  const supporting: NonNullable<QuoteMatch['first']>[] = [];
+  const supporting: Located[] = [];
 
   for (const chunkId of claim.chunkIds) {
     // A cited chunk that does not exist cites nothing, and still counts as a
@@ -196,8 +208,7 @@ function matchQuote(claim: Claim, chunks: ReadonlyMap<string, Chunk>): QuoteMatc
     if (span) supporting.push({ chunkId, chunk, span });
   }
 
-  const first = supporting[0];
-  return { supportingChunkIds: supporting.map((s) => s.chunkId), ...(first ? { first } : {}) };
+  return { supportingChunkIds: supporting.map((s) => s.chunkId), supporting };
 }
 
 function statusFor(score: number | null, verifiedAt: number, partialAt: number): ClaimStatus {
@@ -222,57 +233,47 @@ export async function verifyClaims(
   const { verifiedAt, partialAt } = { ...DEFAULTS, ...options };
 
   const matches = claims.map((claim) => matchQuote(claim, chunks));
-  const judged = matches
-    .map((match, index) => ({ match, index }))
-    .filter((entry): entry is { match: QuoteMatch & { first: NonNullable<QuoteMatch['first']> }; index: number } =>
-      entry.match.first !== undefined,
-    );
 
+  // One pair per supporting chunk judged, flattened into a single batch.
+  const pairs = matches.flatMap((match, index) =>
+    match.supporting.slice(0, JUDGED_PER_CLAIM).map((located) => ({ index, located })),
+  );
   const scores =
-    judged.length === 0
+    pairs.length === 0
       ? []
-      : await judge(
-          judged.map(({ match, index }) => ({
-            sentence: claims[index]!.sentence,
-            evidence: evidenceOf(match.first.chunk),
-          })),
-        );
+      : await judge(pairs.map(({ index, located }) => ({ sentence: claims[index]!.sentence, evidence: evidenceOf(located.chunk) })));
 
-  const scoreByIndex = new Map<number, number | null>();
-  for (const [position, entry] of judged.entries()) {
-    const score = scores[position];
-    scoreByIndex.set(entry.index, score === undefined ? null : score);
+  // The best verdict per claim, and the chunk that earned it. A null is an
+  // outage, not a verdict: it only stands when no chunk could be judged.
+  const best = new Map<number, { located: Located; score: number | null }>();
+  for (const [position, { index, located }] of pairs.entries()) {
+    const score = scores[position] ?? null;
+    const current = best.get(index);
+    if (!current || (score !== null && (current.score === null || score > current.score))) best.set(index, { located, score });
   }
 
   return claims.map((claim, index) => {
-    const { supportingChunkIds, first } = matches[index]!;
-    if (!first) {
+    const { supportingChunkIds } = matches[index]!;
+    const judged = best.get(index);
+    if (!judged) {
       return { ...claim, quoteMatch: false, supportingChunkIds, entailment: 0, status: 'unsupported' };
     }
-    const entailment = scoreByIndex.get(index) ?? null;
+    const { located, score: entailment } = judged;
     const status = statusFor(entailment, verifiedAt, partialAt);
-    const level = levelOf(first.chunk);
-    // A threshold stated without its level is true of one level and false of
-    // the others. The quote holds, so it is partial rather than unsupported.
-    if (status === 'verified' && level && !namesLevel(claim.sentence, first.chunk, level)) {
-      return {
-        ...claim,
-        quoteMatch: true,
-        supportingChunkIds,
-        span: { chunkId: first.chunkId, ...first.span },
-        entailment,
-        status: 'partial',
-        levelOmitted: level,
-      };
-    }
-    return {
+    const level = levelOf(located.chunk);
+    const base = {
       ...claim,
       quoteMatch: true,
       supportingChunkIds,
-      span: { chunkId: first.chunkId, ...first.span },
+      span: { chunkId: located.chunkId, ...located.span },
       entailment,
-      status,
     };
+    // A threshold stated without its level is true of one level and false of
+    // the others. The quote holds, so it is partial rather than unsupported.
+    if (status === 'verified' && level && !namesLevel(claim.sentence, located.chunk, level)) {
+      return { ...base, status: 'partial', levelOmitted: level };
+    }
+    return { ...base, status };
   });
 }
 

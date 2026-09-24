@@ -34,8 +34,8 @@ const PRESENTATION: Record<SentenceStatus, { mark: string; label: string; it: st
   },
   unsupported: {
     mark: '✕',
-    label: 'unsupported: the quote is not in any cited source',
-    it: 'non supportata: la citazione non è in nessuna fonte citata',
+    label: 'unsupported: the quote is not in any cited source, or the source does not back the sentence',
+    it: 'non supportata: la citazione non è in nessuna fonte citata, oppure la fonte non sostiene la frase',
     name: 'non supportata',
     className: 'decoration-wavy decoration-2 text-unsupported',
   },

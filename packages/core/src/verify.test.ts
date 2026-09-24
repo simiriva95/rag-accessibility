@@ -355,3 +355,25 @@ describe('the evidence the judge reads', () => {
     expect(seen[0]).toContain(chunk().text);
   });
 });
+
+describe('a quote found in more than one cited chunk', () => {
+  it('keeps the best verdict, and the span of the chunk that earned it', async () => {
+    const messy = chunk({ id: 'messy' });
+    const clean = chunk({ id: 'clean', docTitle: 'Understanding SC 2.4.11' });
+    const judge: EntailmentJudge = async (pairs) => pairs.map((pair) => (pair.evidence.startsWith('Understanding') ? 1 : 0));
+    const [result] = await verifyClaims([claim({ chunkIds: ['messy', 'clean'] })], chunks(messy, clean), judge);
+    expect(result!.entailment).toBe(1);
+    expect(result!.status).toBe('verified');
+    expect(result!.span?.chunkId).toBe('clean');
+  });
+
+  it('reads an outage as an outage only when no chunk could be judged', async () => {
+    const judge: EntailmentJudge = async (pairs) => pairs.map((_, i) => (i === 0 ? null : 0.5));
+    const [result] = await verifyClaims(
+      [claim({ chunkIds: ['a', 'b'] })],
+      chunks(chunk({ id: 'a' }), chunk({ id: 'b' })),
+      judge,
+    );
+    expect(result!.entailment).toBe(0.5);
+  });
+});
