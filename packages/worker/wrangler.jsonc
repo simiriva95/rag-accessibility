@@ -26,5 +26,6 @@
   ]
 
   // GEMINI_API_KEY is a secret: `wrangler secret put GEMINI_API_KEY`.
-  // GEMINI_MODEL is optional and defaults to gemini-2.5-flash.
+  // GEMINI_MODEL is optional: a comma-separated chain overriding DEFAULT_MODELS
+  // in src/index.ts. Names starting with @cf/ run on the AI binding above.
 }

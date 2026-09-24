@@ -211,6 +211,13 @@ mean *not now*, not *no*. The waits are small, because this runs inside a reques
 waiting on. A refusal that will not change, like a bad key, moves straight on rather than being
 asked again.
 
+The chain also crosses providers. After the Gemini models come two that run on Workers AI through
+the binding the embedding already uses — no key, and a separate daily allowance — so an exhausted
+Gemini quota is a slower answer rather than no answer. They were picked by running the claim schema
+against the real corpus: Llama 4 Scout quotes verbatim; gpt-oss-20b returned nothing in JSON mode
+and qwen3-30b left schema debris inside its quotes. Scout also costs a third of the 70B's output
+price, which matters because that allowance is shared with the embedding and the reranker.
+
 A worse model is still a worse answer, not a wrong one: the verification layer judges whichever
 model replied by exactly the same rule.
 
@@ -355,7 +362,7 @@ Static index in the client, models at the edge.
   embed + quantize     ──►  vectors.bin        ──┤   Web Worker        Cloudflare Worker
   build BM25           ──►  bm25.json          ──┘   dense scan   ◄──► /embed   query vector
                                                      BM25              /rerank  bge-reranker-base
-                                                     RRF fusion        /answer  Gemini Flash
+                                                     RRF fusion        /answer  Gemini, then Llama
                                                         │              /entail  the NLI judge
                                                         ▼
                                                      React UI

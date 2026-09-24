@@ -54,7 +54,11 @@ export type Env = {
   AI?: Ai;
   RATE_LIMITER?: RateLimiter;
   GEMINI_API_KEY?: string;
-  /** Comma-separated, tried in order. The first that answers wins. */
+  /**
+   * Comma-separated, tried in order. The first that answers wins. Names
+   * starting with `@cf/` run on Workers AI through the AI binding; the rest
+   * are Gemini models and need GEMINI_API_KEY.
+   */
   GEMINI_MODEL?: string;
 };
 
@@ -66,8 +70,28 @@ export type Env = {
  * keep working for years cannot rest on a single model staying popular and
  * uncongested. The fallback is smaller and faster; a worse answer beats no
  * answer, and the verification layer judges either the same way.
+ *
+ * Two providers, so one provider's quota running out is not an outage. The
+ * Gemini free tier and the Workers AI daily allocation are separate budgets,
+ * and the Workers AI models need no key at all — they run on the binding the
+ * embedding already uses.
+ *
+ * The Workers AI pair was chosen by running this schema against the real
+ * corpus (September 2026): Llama 4 Scout quotes verbatim and costs a third of
+ * the 70B's output price, which matters because the daily allocation is shared
+ * with the embedding and the reranker — an expensive generator would spend the
+ * budget retrieval needs. The 8B is weaker but cheap. Rejected: gpt-oss-20b
+ * (empty responses in JSON mode), qwen3-30b (quotes with schema debris in
+ * them), llama-3.1-8b-instruct (deprecated 2026-05-30).
  */
-const DEFAULT_MODELS = ['gemini-3.6-flash', 'gemini-2.5-flash', 'gemini-2.5-flash-lite'];
+const DEFAULT_MODELS = [
+  'gemini-3.6-flash',
+  'gemini-2.5-flash',
+  '@cf/meta/llama-4-scout-17b-16e-instruct',
+  '@cf/meta/llama-3.1-8b-instruct-fast',
+];
+
+const isWorkersAi = (model: string) => model.startsWith('@cf/') || model.startsWith('@hf/');
 
 export function modelsOf(env: Env): string[] {
   const configured = (env.GEMINI_MODEL ?? '')
@@ -233,8 +257,12 @@ export async function rerank(
  */
 const apiKey = (env: Env): string | undefined => env.GEMINI_API_KEY?.trim() || undefined;
 
+/** One structured-output request, in a shape either provider can be asked for. */
+type Structured = { system: string; user: string; schema: unknown };
+
 /**
- * Asks each model in turn, retrying the ones that are merely busy.
+ * Asks each model in turn, retrying the ones that are merely busy, and
+ * returns the raw JSON text of the first that answers.
  *
  * 429 and 503 mean "not now", not "no" — a single attempt turns a passing
  * spike into a visible failure. Two short retries, then the next model. The
@@ -244,23 +272,51 @@ const apiKey = (env: Env): string | undefined => env.GEMINI_API_KEY?.trim() || u
  */
 async function generateWith(
   env: Env,
-  key: string,
-  body: (model: string) => unknown,
-): Promise<{ response: Response; model: string } | { failed: string }> {
+  request: Structured,
+): Promise<{ text: string; model: string } | { failed: string }> {
   const failures: string[] = [];
+  const key = apiKey(env);
 
   for (const model of modelsOf(env)) {
+    if (isWorkersAi(model)) {
+      const result = await workersAi(env, model, request);
+      if ('text' in result) return { text: result.text, model };
+      failures.push(`${model}: ${result.failed}`);
+      continue;
+    }
+
+    if (!key) {
+      failures.push(`${model}: no generation key configured`);
+      continue;
+    }
+
     for (let attempt = 0; attempt < 3; attempt++) {
       const response = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
         {
           method: 'POST',
           headers: { 'content-type': 'application/json', 'x-goog-api-key': key },
-          body: JSON.stringify(body(model)),
+          body: JSON.stringify({
+            systemInstruction: { parts: [{ text: request.system }] },
+            contents: [{ parts: [{ text: request.user }] }],
+            generationConfig: {
+              responseMimeType: 'application/json',
+              responseSchema: request.schema,
+              temperature: 0,
+            },
+          }),
         },
       );
 
-      if (response.ok) return { response, model };
+      if (response.ok) {
+        const body = (await response.json()) as {
+          candidates?: { content?: { parts?: { text?: string }[] } }[];
+        };
+        const text = body.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (text) return { text, model };
+        failures.push(`${model}: generation returned no content`);
+        break;
+      }
 
       const busy = response.status === 429 || response.status === 503;
       if (attempt === 0 || !busy) failures.push(`${model}: ${await upstreamError(response, 'generation')}`);
@@ -274,6 +330,39 @@ async function generateWith(
   // blamed a retired model for an outage whose actual cause was the first two
   // being busy — which sends whoever reads it after entirely the wrong thing.
   return { failed: failures.join(' · ') || 'no model was tried' };
+}
+
+/**
+ * A Workers AI model in JSON mode.
+ *
+ * Not retried: the binding's failures are the daily allocation running out or
+ * the model refusing the schema ("JSON Mode couldn't be met"), and neither
+ * changes in the next second. The next model is the better bet.
+ *
+ * max_tokens is explicit because the platform default is 256, which truncates
+ * a cited answer mid-claim into JSON that no longer parses.
+ */
+async function workersAi(env: Env, model: string, request: Structured): Promise<{ text: string } | { failed: string }> {
+  if (!env.AI) return { failed: 'no Workers AI binding' };
+  try {
+    const result = (await env.AI.run(model, {
+      messages: [
+        { role: 'system', content: request.system },
+        { role: 'user', content: request.user },
+      ],
+      response_format: { type: 'json_schema', json_schema: request.schema },
+      temperature: 0,
+      max_tokens: 2048,
+    })) as { response?: unknown };
+
+    // JSON mode may hand back the parsed object or its text, depending on the model.
+    const response = result?.response;
+    if (typeof response === 'string' && response.trim() !== '') return { text: response };
+    if (response && typeof response === 'object') return { text: JSON.stringify(response) };
+    return { failed: 'generation returned no content' };
+  } catch (error) {
+    return { failed: (error as Error).message.slice(0, 300) };
+  }
 }
 
 /**
@@ -322,30 +411,15 @@ export type AnswerResult = (ParsedAnswer & { model: string }) | { degraded: { re
  * answer and never an empty one dressed up as a refusal.
  */
 export async function answer(question: string, sources: Chunkish[], env: Env): Promise<AnswerResult> {
-  const key = apiKey(env);
-  if (!key) return { degraded: { reason: 'no generation key configured' } };
-
   try {
-    const attempt = await generateWith(env, key, () => ({
-      systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
-      contents: [{ parts: [{ text: `${sourceBlock(sources)}\n\nQuestion: ${question}` }] }],
-      generationConfig: {
-        responseMimeType: 'application/json',
-        responseSchema: ANSWER_SCHEMA,
-        temperature: 0,
-      },
-    }));
+    const attempt = await generateWith(env, {
+      system: SYSTEM_PROMPT,
+      user: `${sourceBlock(sources)}\n\nQuestion: ${question}`,
+      schema: ANSWER_SCHEMA,
+    });
 
     if ('failed' in attempt) return { degraded: { reason: attempt.failed } };
-    const { response, model } = attempt;
-
-    const body = (await response.json()) as {
-      candidates?: { content?: { parts?: { text?: string }[] } }[];
-    };
-    const raw = body.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!raw) return { degraded: { reason: 'generation returned no content' } };
-
-    return { ...parseModelAnswer(JSON.parse(raw)), model };
+    return { ...parseModelAnswer(JSON.parse(attempt.text)), model: attempt.model };
   } catch (error) {
     return { degraded: { reason: (error as Error).message } };
   }
@@ -376,33 +450,15 @@ const pairBlock = (pairs: EntailmentPair[]) =>
  */
 export async function entail(pairs: EntailmentPair[], env: Env): Promise<(number | null)[]> {
   const unjudged = () => pairs.map(() => null);
-  const key = apiKey(env);
-  if (!key) return unjudged();
 
   try {
-    const attempt = await generateWith(env, key, () => ({
-      systemInstruction: { parts: [{ text: ENTAILMENT_PROMPT }] },
-      contents: [{ parts: [{ text: pairBlock(pairs) }] }],
-      generationConfig: {
-        responseMimeType: 'application/json',
-        responseSchema: ENTAILMENT_SCHEMA,
-        temperature: 0,
-      },
-    }));
+    const attempt = await generateWith(env, { system: ENTAILMENT_PROMPT, user: pairBlock(pairs), schema: ENTAILMENT_SCHEMA });
 
     if ('failed' in attempt) {
       console.error(attempt.failed);
       return unjudged();
     }
-    const { response } = attempt;
-
-    const body = (await response.json()) as {
-      candidates?: { content?: { parts?: { text?: string }[] } }[];
-    };
-    const raw = body.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!raw) return unjudged();
-
-    return parseVerdicts(JSON.parse(raw), pairs.length);
+    return parseVerdicts(JSON.parse(attempt.text), pairs.length);
   } catch {
     return unjudged();
   }

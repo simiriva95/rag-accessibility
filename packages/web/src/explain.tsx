@@ -244,7 +244,7 @@ function Walkthrough({ run, meta, answer }: { run: Run; meta: Map<string, ChunkM
         <Step
           id="step-generate"
           title="Schema-constrained generation"
-          where="Edge, Gemini API"
+          where="Edge, Gemini or Workers AI"
           time={timings?.generate}
           why={WHY.generate}
         >
@@ -595,11 +595,12 @@ function GenerateStep({ answer }: { answer: AnswerState }) {
             'Model',
             <>
               {model ? <code>{model}</code> : 'Not reported by this worker deployment'}, the first of{' '}
-              <code>{MODELS.generationChain.join(' → ')}</code> to answer. A busy model (429, 503) is
-              retried twice, then the next one is tried.
+              <code>{MODELS.generationChain.join(' → ')}</code> to answer. A busy Gemini model (429, 503) is
+              retried twice, then the next one is tried. The last two run on Workers AI, a separate free
+              quota that needs no key, so one provider running dry is not an outage.
             </>,
           ],
-          ['Decoding', 'Temperature 0, output constrained to a JSON schema.'],
+          ['Decoding', 'Temperature 0, output constrained to a JSON schema (Gemini structured output, or Workers AI JSON mode).'],
           [
             'Context',
             <>

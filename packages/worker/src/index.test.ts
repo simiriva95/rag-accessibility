@@ -231,15 +231,44 @@ describe('answer', () => {
   }, 20_000);
 
   it('degrades rather than inventing when generation is unavailable', async () => {
-    expect(await answer('q', candidates, {})).toEqual({
-      degraded: { reason: 'no generation key configured' },
-    });
+    // No key and no binding: every model in the default chain says why it could not run.
+    const nothing = await answer('q', candidates, {});
+    expect('degraded' in nothing && nothing.degraded.reason).toMatch(/gemini-.*: no generation key configured/);
+    expect('degraded' in nothing && nothing.degraded.reason).toMatch(/@cf\/.*: no Workers AI binding/);
 
     vi.stubGlobal('fetch', geminiReturning({}, false));
     const result = await answer('q', candidates, { GEMINI_API_KEY: 'k', GEMINI_MODEL: 'only' });
     // The reason now names the model, because several may have been tried.
     expect(result).toEqual({ degraded: { reason: 'only: generation returned 500' } });
     vi.unstubAllGlobals();
+  });
+
+  it('falls back to Workers AI when every Gemini model is out of quota', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response(JSON.stringify({ error: { message: 'quota exceeded' } }), { status: 400 })),
+    );
+    const calls: { model: string; input: Record<string, unknown> }[] = [];
+    const AI: Ai = {
+      run: async (model, input) => {
+        calls.push({ model, input: input as Record<string, unknown> });
+        return { response: payload };
+      },
+    };
+
+    const result = await answer('q', candidates, { GEMINI_API_KEY: 'k', GEMINI_MODEL: 'gemini-x, @cf/meta/llama', AI });
+
+    expect('answer' in result && result.model).toBe('@cf/meta/llama');
+    expect(calls[0]!.input['response_format']).toMatchObject({ type: 'json_schema' });
+    // The platform default of 256 tokens would cut a cited answer mid-claim.
+    expect(calls[0]!.input['max_tokens']).toBeGreaterThan(256);
+    vi.unstubAllGlobals();
+  });
+
+  it('runs on Workers AI alone when no Gemini key is configured', async () => {
+    const AI = aiReturning({ response: JSON.stringify(payload) });
+    const result = await answer('q', candidates, { GEMINI_MODEL: '@cf/meta/llama', AI });
+    expect('answer' in result && result.answer.claims[0]!.sentence).toBe('Focus must stay visible.');
   });
 
   it('degrades on unparseable output instead of throwing at the caller', async () => {
@@ -354,6 +383,13 @@ describe('modelsOf', () => {
   it('carries no model the provider has retired', () => {
     // gemini-2.0-flash was in the chain until Google answered 404 for it.
     expect(modelsOf({})).not.toContain('gemini-2.0-flash');
+    // Google answers 404 for this one; Cloudflare deprecated the other on 2026-05-30.
+    expect(modelsOf({})).not.toContain('gemini-2.5-flash-lite');
+    expect(modelsOf({})).not.toContain('@cf/meta/llama-3.1-8b-instruct');
+  });
+
+  it('ends on a provider that needs no key, so an exhausted Gemini quota is not an outage', () => {
+    expect(modelsOf({}).at(-1)).toMatch(/^@cf\//);
   });
 });
 
