@@ -37,7 +37,10 @@ try {
   // No .env is fine; the variables may already be exported.
 }
 
-const chunks: Chunk[] = JSON.parse(await readFile(join(INDEX, 'chunks.json'), 'utf8'));
+// Rebuilt from the two published halves; there is no combined file on disk.
+const meta: Omit<Chunk, 'text'>[] = JSON.parse(await readFile(join(INDEX, 'chunks.meta.json'), 'utf8'));
+const texts: Record<string, string> = JSON.parse(await readFile(join(INDEX, 'chunks.text.json'), 'utf8'));
+const chunks: Chunk[] = meta.map((chunk) => ({ ...chunk, text: texts[chunk.id] ?? '' }));
 const byId = new Map(chunks.map((c) => [c.id, c]));
 const bm25: Bm25Index = JSON.parse(await readFile(join(INDEX, 'bm25.json'), 'utf8'));
 

@@ -355,6 +355,10 @@ the answer changes; at this size it is premature.
 | `vectors.bin` | 600 KB | 600 KB | first query (binary, already dense) |
 | `chunks.text.json` | 1,967 KB | 445 KB | first result rendered |
 
+There is no combined chunk file. `data/` is the site's public directory, so anything written there
+is published — a third file holding both halves would have been 2.5 MB fetched by nobody. The two
+tools that want whole chunks join the halves themselves.
+
 ---
 
 ## The corpus

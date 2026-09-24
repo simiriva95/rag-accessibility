@@ -10,8 +10,17 @@ import { GOLDEN, type GoldAnchor, type GoldenQuestion } from './golden.ts';
 
 const INDEX = resolvePath(import.meta.dirname, '../../../data/index');
 
-export const loadChunks = (): Chunk[] =>
-  JSON.parse(readFileSync(join(INDEX, 'chunks.json'), 'utf8')) as Chunk[];
+/**
+ * Whole chunks, rebuilt from the two files the site actually serves.
+ *
+ * There is no combined file to read: data/ is the web app's public directory,
+ * so one would be published and fetched by nobody.
+ */
+export function loadChunks(): Chunk[] {
+  const meta = JSON.parse(readFileSync(join(INDEX, 'chunks.meta.json'), 'utf8')) as Omit<Chunk, 'text'>[];
+  const texts = JSON.parse(readFileSync(join(INDEX, 'chunks.text.json'), 'utf8')) as Record<string, string>;
+  return meta.map((chunk) => ({ ...chunk, text: texts[chunk.id] ?? '' }));
+}
 
 export type Grade = 1 | 2;
 

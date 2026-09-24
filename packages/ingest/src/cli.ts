@@ -140,11 +140,16 @@ async function main() {
   const chunks = docs.flatMap((doc) => chunkDocument(doc));
   await mkdir(INDEX, { recursive: true });
 
-  // Split, because the two halves are needed at different moments. Everything
-  // but the text is what retrieval and rendering a result list need, and it
-  // gzips to 54 KB against 502 KB for the whole file. The text is only wanted
-  // once a result is shown or a quote is checked, so it loads alongside rather
-  // than gating first paint.
+  // Two files, because the halves are needed at different moments. Everything
+  // but the text is what retrieval and a result list need, and it gzips to
+  // 54 KB against 502 KB for the pair together. The text is only wanted once a
+  // result is shown or a quote is checked, so it loads alongside rather than
+  // gating first paint.
+  //
+  // There is deliberately no third file holding both. data/ is the site's
+  // public directory, so anything written here is published — and a combined
+  // copy nothing fetches is 2.5 MB of dead weight in every deploy. The two
+  // readers that want whole chunks join them; that is four lines each.
   await writeFile(
     join(INDEX, 'chunks.meta.json'),
     JSON.stringify(chunks.map(({ text: _text, ...meta }) => meta)),
@@ -153,8 +158,6 @@ async function main() {
     join(INDEX, 'chunks.text.json'),
     JSON.stringify(Object.fromEntries(chunks.map((c) => [c.id, c.text]))),
   );
-  // Kept whole as well: the CLIs and the eval harness want one file.
-  await writeFile(join(INDEX, 'chunks.json'), JSON.stringify(chunks) + '\n');
 
   // Indexed over the same text that gets embedded: the heading path carries
   // the criterion number, which is exactly what identifier queries ask for.
@@ -176,7 +179,7 @@ async function main() {
   const median = tokens[Math.floor(tokens.length / 2)]!;
   const withScRef = chunks.filter((c) => c.scRef !== undefined).length;
   process.stdout.write(
-    `${chunks.length} chunks -> data/index/chunks.json ` +
+    `${chunks.length} chunks -> data/index/chunks.{meta,text}.json ` +
       `(median ${median} tokens, max ${tokens.at(-1)}, ${withScRef} carry an SC ref)\n`,
   );
 

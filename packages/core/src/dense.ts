@@ -17,7 +17,7 @@ import type { Scored } from './types.ts';
 
 export const DENSE_MAGIC = 0x52414756; // "RAGV"
 
-/** Vectors as shipped: ids come from chunks.json, which is in the same order. */
+/** Vectors as shipped: ids come from chunks.meta.json, which is in the same order. */
 export type DenseVectors = {
   dims: number;
   /** Per-vector dequantization scale. */
