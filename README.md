@@ -229,6 +229,11 @@ right answer sits — goes from 0.530 to 0.733.
 
 ## How this was built
 
+The code here was written by an AI agent working from my brief. What I contributed is what the
+`git log` shows: the architecture and its rejected alternatives, the constraints that shaped it
+(zero running cost, nothing that rots, WCAG 2.2 AA on the demo itself), the call on every
+trade-off, and a review at each increment. I take that to be the interesting part of the job now.
+
 One coherent change per commit, each with its reasoning written down. The `git log` is meant to be
 read: the messages say *why*, not what the diff already shows.
 
