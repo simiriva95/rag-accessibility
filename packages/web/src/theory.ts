@@ -13,6 +13,7 @@
 export const MODELS = {
   embedding: '@cf/baai/bge-small-en-v1.5',
   reranker: '@cf/baai/bge-reranker-base',
+  judge: '@cf/meta/llama-3.3-70b-instruct-fp8-fast',
   generationChain: ['gemini-3.6-flash', 'gemini-2.5-flash', '@cf/meta/llama-4-scout-17b-16e-instruct', '@cf/meta/llama-3.1-8b-instruct-fast'],
   queryPrefix: 'Represent this sentence for searching relevant passages: ',
 } as const;

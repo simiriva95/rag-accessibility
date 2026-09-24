@@ -814,8 +814,8 @@ function VerifyStep({ answer, meta }: { answer: AnswerState; meta: Map<string, C
           [
             'Entailment',
             t(
-              `An LLM judge labels each (evidence, sentence) pair supported (1), partially supported (0.5) or not supported (0), in one batched call. Verified at ≥ ${PIPELINE_CONSTANTS.verifiedAt}, partial at ≥ ${PIPELINE_CONSTANTS.partialAt}. Then one rule no model is trusted with: a threshold whose source states a conformance level (A, AA, AAA) is held at partial unless the sentence names that level or criterion.`,
-              `Un giudice LLM etichetta ogni coppia (prova, frase) come supportata (1), parzialmente supportata (0,5) o non supportata (0), in un’unica chiamata. Verificata da ${PIPELINE_CONSTANTS.verifiedAt}, parziale da ${PIPELINE_CONSTANTS.partialAt}. Poi una regola che non si affida a nessun modello: una soglia la cui fonte indica un livello di conformità (A, AA, AAA) resta parziale se la frase non nomina quel livello o il criterio.`,
+              `An LLM judge (${MODELS.judge}, chosen for giving the same verdict to the same pair whatever else is in the batch) labels each (evidence, sentence) pair supported (1), partially supported (0.5) or not supported (0), in one batched call. Verified at ≥ ${PIPELINE_CONSTANTS.verifiedAt}, partial at ≥ ${PIPELINE_CONSTANTS.partialAt}. Then one rule no model is trusted with: a threshold whose source states a conformance level (A, AA, AAA) is held at partial unless the sentence names that level or criterion.`,
+              `Un giudice LLM (${MODELS.judge}, scelto perché dà lo stesso verdetto alla stessa coppia qualunque cosa ci sia nel lotto) etichetta ogni coppia (prova, frase) come supportata (1), parzialmente supportata (0,5) o non supportata (0), in un’unica chiamata. Verificata da ${PIPELINE_CONSTANTS.verifiedAt}, parziale da ${PIPELINE_CONSTANTS.partialAt}. Poi una regola che non si affida a nessun modello: una soglia la cui fonte indica un livello di conformità (A, AA, AAA) resta parziale se la frase non nomina quel livello o il criterio.`,
             ),
           ],
         ].map(([name, text]) => (

@@ -7,6 +7,7 @@ import {
   embed,
   embedDocuments,
   entail,
+  judgeModelsOf,
   handle,
   modelsOf,
   rerank,
@@ -308,6 +309,24 @@ describe('answer', () => {
 });
 
 describe('entail', () => {
+  it('asks the judge chain, led by Llama 3.3 70B, not the generation chain', async () => {
+    const asked: string[] = [];
+    const AI: Ai = {
+      run: async (model) => {
+        asked.push(model);
+        return { response: { verdicts: [{ index: 0, label: 'supported' }] } };
+      },
+    };
+    const scores = await entail([{ sentence: 'Focus must stay visible.', evidence: 'Focus stays visible.' }], {
+      AI,
+      GEMINI_MODEL: '@cf/meta/llama-4-scout-17b-16e-instruct',
+    });
+    expect(scores).toEqual([1]);
+    expect(asked).toEqual(['@cf/meta/llama-3.3-70b-instruct-fp8-fast']);
+    expect(judgeModelsOf({})[0]).toBe('@cf/meta/llama-3.3-70b-instruct-fp8-fast');
+    expect(judgeModelsOf({ JUDGE_MODEL: 'a, b' })).toEqual(['a', 'b']);
+  });
+
   // 400, not 429: a 429 is now retried across the whole model chain, which is
   // the behaviour covered separately under `answer`.
   const verdicts = (body: unknown, ok = true) =>

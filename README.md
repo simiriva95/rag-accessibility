@@ -206,6 +206,12 @@ checked without a model: when the cited chunk states a requirement at one confor
 sentence names neither that level nor the criterion, the claim is held at `partial`, and the answer
 says which level was left out. The generator is also told to give each level with its criterion.
 
+**The judge has its own model.** Llama 4 Scout, the generation fallback, was measured as an
+inconsistent judge: one pair scored 1 or 0.5 depending on the other pairs in its batch, and an
+English sentence scored lower than its Italian translation. The judge now leads with Llama 3.3 70B,
+which gave every probe the same verdict alone and batched, in both languages, whatever Gemini's
+quota. It costs a few dozen neurons a question.
+
 **Unsupported sentences are shown, not hidden.** Hiding them would make this a demonstration that
 the model never fails, which is not the claim.
 
@@ -394,7 +400,7 @@ Static index in the client, models at the edge.
   build BM25           ──►  bm25.json          ──┘   dense scan   ◄──► /embed   query vector
                                                      BM25              /rerank  bge-reranker-base
                                                      RRF fusion        /answer  Gemini, then Llama
-                                                        │              /entail  the NLI judge
+                                                        │              /entail  Llama 3.3 70B
                                                         ▼
                                                      React UI
                                                      verification runs here

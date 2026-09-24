@@ -60,6 +60,8 @@ export type Env = {
    * are Gemini models and need GEMINI_API_KEY.
    */
   GEMINI_MODEL?: string;
+  /** The entailment judge's chain, in the same format. Defaults to JUDGE_MODELS. */
+  JUDGE_MODEL?: string;
 };
 
 /**
@@ -90,6 +92,33 @@ const DEFAULT_MODELS = [
   '@cf/meta/llama-4-scout-17b-16e-instruct',
   '@cf/meta/llama-3.1-8b-instruct-fast',
 ];
+
+/**
+ * The judge's chain: one model first, whatever the generator's quota.
+ *
+ * A judge has to be consistent more than it has to be clever: the same
+ * sentence against the same evidence should get the same verdict. Llama 4
+ * Scout was not, measured on the conformance-level probes: one pair scored 1
+ * or 0.5 depending on which other pairs were judged in the same batch, and an
+ * English sentence scored lower than its Italian translation. So the judge
+ * gets its own chain, led by Llama 3.3 70B, and does not wait for Gemini's
+ * free tier. It costs a few dozen neurons a question: a batch of short pairs
+ * in, a handful of labels out.
+ */
+const JUDGE_MODELS = [
+  '@cf/meta/llama-3.3-70b-instruct-fp8-fast',
+  'gemini-3.6-flash',
+  'gemini-2.5-flash',
+  '@cf/meta/llama-4-scout-17b-16e-instruct',
+];
+
+export function judgeModelsOf(env: Env): string[] {
+  const configured = (env.JUDGE_MODEL ?? '')
+    .split(',')
+    .map((name) => name.trim())
+    .filter(Boolean);
+  return configured.length > 0 ? configured : JUDGE_MODELS;
+}
 
 const isWorkersAi = (model: string) => model.startsWith('@cf/') || model.startsWith('@hf/');
 
@@ -273,11 +302,12 @@ type Structured = { system: string; user: string; schema: unknown };
 async function generateWith(
   env: Env,
   request: Structured,
+  models: string[] = modelsOf(env),
 ): Promise<{ text: string; model: string } | { failed: string }> {
   const failures: string[] = [];
   const key = apiKey(env);
 
-  for (const model of modelsOf(env)) {
+  for (const model of models) {
     if (isWorkersAi(model)) {
       const result = await workersAi(env, model, request);
       if ('text' in result) return { text: result.text, model };
@@ -481,7 +511,11 @@ export async function entail(pairs: EntailmentPair[], env: Env): Promise<(number
   const unjudged = () => pairs.map(() => null);
 
   try {
-    const attempt = await generateWith(env, { system: ENTAILMENT_PROMPT, user: pairBlock(pairs), schema: ENTAILMENT_SCHEMA });
+    const attempt = await generateWith(
+      env,
+      { system: ENTAILMENT_PROMPT, user: pairBlock(pairs), schema: ENTAILMENT_SCHEMA },
+      judgeModelsOf(env),
+    );
 
     if ('failed' in attempt) {
       console.error(attempt.failed);
