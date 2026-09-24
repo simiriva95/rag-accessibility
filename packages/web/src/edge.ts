@@ -56,7 +56,7 @@ export type Generated =
 
 export const generate = (
   question: string,
-  sources: { id: string; text: string }[],
+  sources: { id: string; text: string; title?: string }[],
   language: 'en' | 'it' = 'en',
 ): Promise<Edge<Generated>> => call('/answer', { question, sources, language });
 

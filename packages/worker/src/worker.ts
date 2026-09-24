@@ -132,7 +132,11 @@ export function modelsOf(env: Env): string[] {
   return configured.length > 0 ? configured : DEFAULT_MODELS;
 }
 
-export type Chunkish = { id: string; text: string };
+/**
+ * A source as the worker receives it. `title` is the document and heading path
+ * it sits under: context the model reads, never text it may quote.
+ */
+export type Chunkish = { id: string; text: string; title?: string };
 
 const CORS = {
   'access-control-allow-origin': '*',
@@ -167,10 +171,15 @@ function chunks(value: unknown, field: string, max: number): Chunkish[] {
 
   return value.map((item, i) => {
     if (typeof item !== 'object' || item === null) throw new BadRequest(`${field}[${i}] must be an object`);
-    const { id, text: body } = item as Record<string, unknown>;
+    const { id, text: body, title } = item as Record<string, unknown>;
     if (typeof id !== 'string' || id === '') throw new BadRequest(`${field}[${i}].id must be a string`);
     if (typeof body !== 'string') throw new BadRequest(`${field}[${i}].text must be a string`);
-    return { id, text: body.slice(0, LIMITS.chunkChars) };
+    if (title !== undefined && typeof title !== 'string') throw new BadRequest(`${field}[${i}].title must be a string`);
+    return {
+      id,
+      text: body.slice(0, LIMITS.chunkChars),
+      ...(typeof title === 'string' && title.trim() !== '' ? { title: title.slice(0, 300) } : {}),
+    };
   });
 }
 
@@ -434,8 +443,27 @@ Rules:
 - Do not put source ids or claim numbers inside the sentences. Citations belong in claims only.
 - WCAG requirements depend on the conformance level. When the sources give a requirement at more than one level (A, AA, AAA), give each one with its level, starting from the lowest; name the success criterion each comes from. Never state a WCAG threshold without its level.`;
 
+/**
+ * The title goes in an attribute, outside the quotable text. A criterion's
+ * level is stated in its document title ("... (Level AAA)"), not in every
+ * paragraph, so without it the model cannot know which level a threshold
+ * belongs to; inside the text, it could be quoted and fail verification.
+ */
+const attribute = (value: string) => value.replace(/[&"<>]/g, (c) => ({ '&': '&amp;', '"': '&quot;', '<': '&lt;', '>': '&gt;' })[c]!);
+
 const sourceBlock = (sources: Chunkish[]) =>
-  sources.map((source) => `<source id="${source.id}">\n${source.text}\n</source>`).join('\n\n');
+  sources
+    .map(
+      (source) =>
+        `<source id="${source.id}"${source.title ? ` title="${attribute(source.title)}"` : ''}>\n${source.text}\n</source>`,
+    )
+    .join('\n\n');
+
+/** Repeated after the question, where a model is likeliest to act on it. */
+const REMINDER: Record<AnswerLanguage, string> = {
+  en: 'Remember: every WCAG threshold with its level and criterion, as in "(Level AA, 1.4.3)". The level is in the source title.',
+  it: 'Ricorda: ogni soglia WCAG con il suo livello e il criterio, come "(Livello AA, 1.4.3)". Il livello è nel titolo della fonte. Frasi in italiano, citazioni in inglese copiate esattamente.',
+};
 
 /** `model` names whichever model in the chain actually answered, so the UI can say which one did. */
 export type AnswerResult = (ParsedAnswer & { model: string }) | { degraded: { reason: string } };
@@ -469,7 +497,7 @@ export async function answer(
   try {
     const attempt = await generateWith(env, {
       system: SYSTEM_PROMPT + LANGUAGE_RULE[language],
-      user: `${sourceBlock(sources)}\n\nQuestion: ${question}`,
+      user: `${sourceBlock(sources)}\n\nQuestion: ${question}\n\n${REMINDER[language]}`,
       schema: ANSWER_SCHEMA,
     });
 

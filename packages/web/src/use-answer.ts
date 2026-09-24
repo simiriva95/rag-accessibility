@@ -81,7 +81,8 @@ export function useAnswer(retrieval: Retrieval, language: 'en' | 'it' = 'en'): A
       const language = languageRef.current;
       const response = await generate(
         run.query,
-        sources.map(({ id: chunkId, text: body }) => ({ id: chunkId, text: body })),
+        // The title carries what a paragraph leaves to its page, such as a criterion's level.
+        sources.map((chunk) => ({ id: chunk.id, text: chunk.text, title: [chunk.docTitle, ...chunk.headingPath].join(' > ') })),
         language,
       );
       if (id !== generation.current) return;
