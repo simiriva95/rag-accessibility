@@ -3,10 +3,10 @@
 Questa guida spiega **cosa stiamo costruendo, perché, e come funziona ogni pezzo**.
 È scritta per essere letta a distanza di mesi, quando i dettagli saranno svaniti.
 
-Stato: **tutte e tre le settimane completate a livello di codice**, UI inclusa. Embedding,
-reranker e generazione girano solo con le credenziali (vedi §22); tutto il resto — retrieval,
-verifica, metriche, Worker, applicazione web, pass di accessibilità — è scritto, testato e
-verificato nel browser. 206 test, zero violazioni axe.
+Stato: **finito e online** — [rag-accessibility.pages.dev](https://rag-accessibility.pages.dev).
+Indice statico su Cloudflare Pages, modelli su un Cloudflare Worker. 388 ms al primo paint, 696 ms
+per caricare 1.592 chunk e i loro vettori. 211 test, zero violazioni axe, ablation completa su 60
+domande.
 
 Il [README](../README.md) è la versione per chi ha cinque minuti. Questa guida è la versione per
 chi deve rimetterci le mani.
@@ -480,21 +480,37 @@ Un retriever che non può girare viene riportato come **non disponibile, con il 
 Mai eliminato in silenzio, mai sostituito coi numeri della riga accanto. L'unico valore
 della tabella è che chi legge possa fidarsi di ciò che dichiara.
 
-### Baseline attuale (solo metà lessicale)
+### L'ablation completa, su 60 domande
 
 | Retriever | Recall@5 | Recall@10 | Recall@30 | Success@5 | nDCG@10 | MRR |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| BM25 only | 40.5% | 59.2% | 78.2% | 68.6% | 0.466 | 0.514 |
+| BM25 only | 39.5% | 56.9% | 73.9% | 71.7% | 0.475 | 0.530 |
+| Dense only | 47.5% | 64.8% | 79.9% | 73.6% | 0.541 | 0.594 |
+| Hybrid (RRF) | 52.1% | 65.2% | **84.2%** | 84.9% | **0.550** | 0.629 |
+| Hybrid + rerank | **60.4%** | **66.5%** | 66.1%\* | **94.3%** | 0.536\* | **0.733** |
+
+\* *La riga col reranker restituisce 8 risultati, non 30: quelle due colonne sono limitate dal
+taglio, non dal reranker. Recall@5, Success@5 e MRR confrontano cose confrontabili.*
 
 ### Recall@10 per tipo di domanda — la metà interessante
 
-| Retriever | identifier (12) | conceptual (17) | design (6) |
+| Retriever | identifier (18) | conceptual (25) | design (10) |
 | --- | ---: | ---: | ---: |
-| BM25 only | **66.5%** | **47.3%** | 78.3% |
+| BM25 only | **69.3%** | 45.5% | 63.4% |
+| Dense only | 54.1% | **69.7%** | 71.6% |
+| Hybrid (RRF) | 66.1% | 61.8% | **71.9%** |
+| Hybrid + rerank | **78.8%** | 59.7% | 61.2% |
 
-Ecco l'argomento, già visibile: **BM25 prende 66,5% sugli identificatori e 47,3% sui
-concetti**. Quel divario è esattamente ciò per cui esiste la metà densa. L'ablation
-mostrerà se si chiude — o se la premessa era sbagliata.
+**L'ipotesi ha retto.** BM25 è forte sugli identificatori e debole sulle parafrasi; il denso è
+l'immagine speculare. Nessuna delle due è brava in entrambe le cose.
+
+Il set è stato portato **da 40 a 60 domande dopo** aver preso questi numeri la prima volta, ed è il
+controllo che conta: il divario si è **allargato**, non ristretto — da 19,2 punti a 23,8. Un
+campione più grande che conferma invece di erodere è la ragione per crederci.
+
+Fondendo, si tiene quasi tutto di BM25 sugli identificatori *e* quasi tutto del denso sui concetti.
+L'effetto principale è su quanto arriva qualcosa di utile in cima: **Success@5 passa da 71,7% e
+73,6% da sole a 84,9% fuse, e 94,3% dopo il rerank**.
 
 La tabella viene rigenerata da `pnpm --filter @rag/eval ablation` e committata in
 [ABLATION.md](ABLATION.md).
@@ -652,6 +668,29 @@ vettore corto in silenzio corromperebbe ogni coseno dell'indice.
   limitano quanto costa una chiamata. Un chunk troppo lungo viene **troncato**, non
   rifiutato: è colpa del nostro chunker, non di chi chiama.
 
+### La modalità documenti su `/embed`
+
+Il Worker ha già il binding Workers AI. Quindi l'ingest può indicizzare il corpus **passando da
+lui**, senza un secondo token REST.
+
+Due forme separate di proposito: `query` per una, `texts` per molte. bge-v1.5 è asimmetrico, e
+mettere il prefisso su un documento lo sposta nello spazio delle query costando recall in silenzio.
+Tenendole distinte, chi chiama non può sbagliare per distrazione.
+
+I documenti vanno a batch di 100: **1.592 chunk in 16 richieste**, dentro una sola finestra di rate
+limit. Sedici secondi, nessun throttling.
+
+Costo onesto: allarga ciò che il Worker fa per un chiamante anonimo. A limitarlo sono il cap sul
+batch, il cap per testo e il rate limit per IP.
+
+### Il backoff stava in un posto solo
+
+Il retry su 429 viveva solo nel percorso a batch. Embeddare il corpus sopravviveva a un rate limit;
+valutare il golden set — **60 query separate** — no, e falliva con un'eccezione.
+
+Ora entrambi i percorsi passano per lo stesso `withBackoff`. Sei tentativi arrivano a 32 secondi
+l'uno, 63 in totale: abbastanza da attraversare una finestra da 60 secondi.
+
 ### Il contratto della risposta — `packages/core/src/answer.ts`
 
 Sta in `core` perché Worker, UI ed eval ne condividano **una sola** definizione.
@@ -783,11 +822,31 @@ Vite + React + TypeScript + Tailwind. Due viste in un tablist: **Answer** e **Re
 |---|---:|---:|---|
 | `chunks.meta.json` | 550 KB | **54 KB** | primo paint |
 | `bm25.json` | 1.247 KB | 379 KB | prima query |
-| `vectors.bin` | ~600 KB | ~600 KB | prima query (binario, già denso) |
+| `vectors.bin` | 600 KB | 600 KB | prima query (binario, già denso) |
 | `chunks.text.json` | 1.967 KB | 445 KB | primo risultato mostrato |
 
 Tutto tranne il testo — cioè ciò che servono retrieval e lista risultati — sta in
 **54 KB contro i 502 KB** del file intero. Il testo non blocca più il primo paint.
+
+**Non esiste un terzo file con entrambe le metà.** `data/` è la public directory del sito, quindi
+tutto ciò che ci si scrive viene pubblicato: un file combinato sarebbero stati 2,5 MB scaricati da
+nessuno, e gli stessi dati mantenuti due volte. I due strumenti che vogliono i chunk interi — la
+CLI da terminale e l'harness — uniscono le metà da soli, quattro righe ciascuno.
+
+Il deploy è passato da 11 MB a **7,7 MB**.
+
+### Un 404 che non sembra un 404
+
+Cloudflare Pages risponde a un percorso sconosciuto con `index.html` e **status 200**. Lo fa anche
+Vite in sviluppo.
+
+Verificando la rimozione di `chunks.json` l'ho visto restituire 200 e ho pensato che il deploy
+avesse fallito. Non era così: 623 byte, `content-type: text/html`, identici a un percorso inventato
+di sana pianta.
+
+È il motivo per cui il caricamento dell'indice denso **decodifica e verifica il magic number**
+invece di fidarsi di `response.ok`: un 404 che restituisce HTML verrebbe altrimenti interpretato
+come un indice.
 
 ### `data/` è il `publicDir`
 
@@ -990,7 +1049,33 @@ pseudo-elemento.
 
 ---
 
-## 22. Come si esegue
+## 22. Il deploy, e due trappole
+
+### La chiave Gemini era giusta dall'inizio
+
+Google rispondeva `API key not valid`. Tre tentativi, tre chiavi, stesso errore.
+
+**Causa: un a-capo.** Incollando un secret in un campo della dashboard ci si porta dietro il
+newline, e uno spazio in coda a un valore di header HTTP lo rende invalido — il messaggio a monte è
+tecnicamente vero e diagnosticamente inutile.
+
+Due correzioni permanenti: il Worker **trimma** la chiave, e **riporta il messaggio di Google**
+invece del solo `400`. È la seconda che ha reso trovabile la prima.
+
+### `wrangler pages project create` fallisce in un workspace pnpm
+
+Delega al nuovo percorso Workers, che esegue `npm install` e si strozza sul protocollo
+`workspace:*`. Serve `--force` **una volta sola** per creare il progetto; dopo, i comandi normali
+funzionano.
+
+### Il 522 transitorio
+
+Subito dopo il deploy, `vectors.bin` rispondeva 522. Tre tentativi dopo: 200, 617.708 byte in
+0,3 s, identici al file locale. Era propagazione — verificato invece di dato per buono.
+
+---
+
+## 23. Come si esegue
 
 
 ```bash
@@ -1075,7 +1160,7 @@ vero**: a larghezza zero ogni elemento ha un box degenere e axe restituisce `inc
 
 ---
 
-## 23. Cosa manca
+## 24. Stato e cosa manca
 
 
 ### Settimana 1 — fatta
@@ -1087,9 +1172,9 @@ vero**: a larghezza zero ogni elemento ha un box degenere e axe restituisce `inc
 - [x] Indice denso int8 + formato binario
 - [x] Fusione RRF
 - [x] CLI che risponde da terminale
-- [x] Golden set, 40 domande con rilevanza graduata
+- [x] Golden set con rilevanza graduata — 40 domande, poi 60
 - [x] Metriche e harness di ablation
-- [ ] Embedding del corpus — **credenziali**
+- [x] Embedding del corpus
 
 ### Settimana 2 — fatta
 
@@ -1107,24 +1192,32 @@ vero**: a larghezza zero ogni elemento ha un box degenere e axe restituisce `inc
 - [x] Vista risposta con stato per frase e sorgente evidenziata (§20)
 - [x] Pass di accessibilità: axe pulito, tastiera, contrasto misurato (§21)
 - [x] README
+- [x] Deploy del Worker e del sito (§22)
+- [x] GIF del retrieval debugger
+- [x] Golden set portato a 60, ablation completa
 
-### Cosa resta davvero
+### La definition of done del brief
+
+| | |
+|---|---|
+| Una frase su cosa fa | ✅ |
+| Tabella di ablation sopra la piega | ✅ quattro righe, tutte misurate |
+| GIF del retrieval debugger | ✅ |
+| Demo che carica in meno di due secondi | ✅ 0,7 s |
+| Chiedere una domanda | ✅ |
+| Vedere perché ogni frase è affidabile | ✅ |
+
+### Cosa resta aperto
 
 | | Perché |
 |---|---|
-| Embedding del corpus | **credenziali Cloudflare** |
-| Deploy del Worker | **credenziali Cloudflare + Gemini** |
-| Tre righe dell'ablation | dipendono dai due punti sopra |
-| GIF del debugger | serve il reranker: senza, ogni risultato tiene il rango e la GIF sarebbe otto linee orizzontali |
-| Passata con screen reader | serve una persona con VoiceOver o NVDA |
-| Vista risposta esercitata su una risposta vera | serve la generazione |
-
-Il codice per riempire ogni casella è scritto e testato. Tutto passa da due variabili in `.env` e
-un `wrangler deploy`.
+| Passata con screen reader | Serve una persona con VoiceOver o NVDA. Nel README è dichiarato come non fatto, non sottinteso |
+| Il Worker è un endpoint di embedding pubblico | Rate limit 20/minuto per IP. Per una demo va bene; se un giorno i consumi sembrano strani, è lì che guardare |
+| Il corpus normalizzato è ridistribuito | W3C Document License e Open Government Licence lo permettono con attribuzione, e il README cita le fonti. Meglio saperlo di averlo fatto |
 
 ---
 
-## 24. Decisioni prese, per memoria
+## 25. Decisioni prese, per memoria
 
 
 | Decisione | Motivo |
@@ -1143,6 +1236,12 @@ un `wrangler deploy`.
 | Escape gestito a mano nel dialog | CloseWatcher non ha fatto scattare né `cancel` né `close` nel motore di test |
 | Colori di stato per schema | Un valore solo non regge 4.5:1 contro bianco *e* contro quasi-nero |
 | `axe-core` come devDependency, non da CDN | Audit riproducibile, versione nel lockfile |
+| Nessun file combinato dei chunk | `data/` è pubblicato: sarebbero 2,5 MB scaricati da nessuno |
+| L'ingest può passare dal Worker | Evita un secondo token: il binding Workers AI c'è già |
+| Modalità `query` e `texts` separate su `/embed` | bge-v1.5 è asimmetrico; forme distinte impediscono di sbagliare prefisso |
+| Golden set portato a 60 **dopo** i primi numeri | Il controllo che conta: il divario si è allargato, non ristretto |
+| Il README apre con accessibilità e performance | L'ablation qualificava il progetto come "motore di ricerca" al lettore sbagliato |
+| Dichiarato che il codice è scritto da un agente | Il repo lo lascia intuire comunque; dirlo è una posizione più forte |
 
 ### Nota sulla dimensione del corpus
 
