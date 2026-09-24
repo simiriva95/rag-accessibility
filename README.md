@@ -3,11 +3,11 @@
 Question answering over WCAG 2.2 and the GOV.UK Design System, where the retrieval is shown as it
 happens and **every quoted claim is checked against the text it cites** — not asserted, checked.
 
-[Ablation](docs/ABLATION.md) · [Guida in italiano](docs/GUIDA.md) · *demo link goes here once the
-worker is deployed*
+**[Live demo](https://rag-accessibility.pages.dev)** · [Ablation](docs/ABLATION.md) ·
+[Guida in italiano](docs/GUIDA.md)
 
-> **Status.** Everything runs. The worker is deployed, the corpus is embedded, and every number
-> below was measured on this corpus. What is missing is a public demo link and a GIF.
+> Static index on Cloudflare Pages, models on a Cloudflare Worker. 388 ms to first paint, 696 ms to
+> load 1,592 chunks and their vectors. Every number in this README was measured on this corpus.
 
 ---
 
@@ -292,8 +292,23 @@ Then deploy the worker and point the site at it:
 
 ```bash
 cd packages/worker && npx wrangler secret put GEMINI_API_KEY && npx wrangler deploy
-# then set VITE_WORKER_URL for the web build
 ```
+
+Then point the site at it and publish:
+
+```bash
+echo "VITE_WORKER_URL=https://<your-worker>.workers.dev" > packages/web/.env
+pnpm --filter @rag/web build
+npx wrangler pages deploy packages/web/dist --project-name=<your-project> --branch=main
+```
+
+Paste a secret into the dashboard and it arrives with a trailing newline; whitespace in a header
+value is refused upstream, and the error you get back says the key is invalid. The worker trims it
+and reports the upstream's own message, which is the only reason that was findable.
+
+With no REST token the ingest embeds the corpus through the deployed worker instead — `/embed`
+takes `texts` for documents as well as `query` for one query. 1,592 chunks in 16 requests, 16
+seconds, no throttling.
 
 ---
 
