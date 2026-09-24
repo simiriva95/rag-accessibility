@@ -227,6 +227,81 @@ right answer sits — goes from 0.530 to 0.733.
 
 ---
 
+## How this was built
+
+One coherent change per commit, each with its reasoning written down. The `git log` is meant to be
+read: the messages say *why*, not what the diff already shows.
+
+### The tests found the things a browser never would
+
+Seven defects were caught before any of this had been rendered once. They are the kind that do not
+look like anything on screen:
+
+- **Chunks drifted past their cap** — size was measured as the sum of the blocks while the token
+  count was measured on the slice, and one chunk reached 740 tokens against a 480 limit. Both
+  measure the slice now, which is what actually gets embedded.
+- **The overlap between chunks carried whole trailing blocks** with no room check, then added the
+  next block without re-checking the cap.
+- **A chunk that reached its target just before a section heading** dragged its overlap across it.
+- **Normalizing per character cannot compose.** `e` + U+0301 never equalled `é`, which loses the
+  one equivalence NFC exists to provide — so a correct citation in decomposed text would have been
+  reported as a fabrication.
+- **One offset per character cannot end a span**, because composing turns several source characters
+  into one. The map carries a start and an end now.
+- **A short embedding batch would have misaligned every vector** with the wrong chunk. One vector
+  returned for two texts is now refused rather than zipped up hopefully.
+- **Eight golden-set anchors stopped matching** when the chunker changed. The resolver refuses to
+  score against an annotation that quietly emptied.
+
+### The browser found the rest
+
+Seven more only showed up in a real page, and two of those are invisible even there:
+
+- **A closed `<dialog>` was still keyboard reachable** — a layout utility overrode the user-agent
+  rule that hides it, so Tab walked into invisible content.
+- **`aria-labelledby` pointed at an id that did not exist** while the dialog was closed.
+- **Escape did not close the dialog.** A trusted keydown arrived, nothing called `preventDefault`,
+  and no `cancel` or `close` event ever fired — the CloseWatcher path a native dialog relies on
+  simply did not run in that engine. It is handled explicitly now.
+- **The debugger's connectors never drew at all.** The check compared a *container* width against
+  `1024`, which is the *viewport* breakpoint; inside a max-width container the two never agree. It
+  reads the layout directly now instead of trusting two constants to stay in step.
+- **The connector overlay painted over the column text** instead of behind it, because an
+  absolutely positioned SVG paints above its static siblings.
+- **`body` had no background**, so the overscroll area fell back to white behind a dark page.
+- **Heading order skipped** from `h1` to `h3`.
+
+### Three numbers that were wrong before they were right
+
+Measuring badly is worse than not measuring, because it produces a confident answer.
+
+**axe reported thirty contrast results as undeterminable.** The obvious culprit was `oklch` —
+Tailwind v4's entire palette. It was not: the browser pane was at zero width, so every element had
+a degenerate box. At a real viewport they resolve.
+
+**The contrast figures took three attempts.** `getComputedStyle` hands back `oklch()` unresolved,
+and so does `canvas.fillStyle`. Painting the pixel and reading it back with `getImageData` is the
+method that cannot lie.
+
+**A README illustration carried invented reranker scores** — 0.94, 0.71 — for a stage that had
+never run, written to make the picture look complete. That is precisely the failure this project
+exists to catch, committed while describing it. The rule it cost: in this repository a number is
+either measured or it is not written.
+
+### What was cut, and when
+
+The brief was three weeks of evenings. Two things went early and were not quietly restored:
+**EN 301 549** (ETSI publishes it as PDF, and PDF-to-offsets is the most fragile job in the
+pipeline) and **a golden set of sixty questions**, started at forty so the annotation could be done
+after seeing real retrieval output. The forty became sixty later, once the harness was fast — and
+the point of growing it was to find out whether the conclusion survived a bigger sample. It did,
+and sharpened.
+
+**Still not done**, and said so rather than implied: a screen reader pass, which needs a human with
+VoiceOver or NVDA.
+
+---
+
 ## Architecture
 
 Static index in the client, models at the edge.
