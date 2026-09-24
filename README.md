@@ -268,6 +268,30 @@ and the headline effect is on whether anything useful reaches the top at all: **
 71.7% and 73.6% alone to 84.9% fused, and 94.3% after reranking.** MRR — how far down the first
 right answer sits — goes from 0.530 to 0.733.
 
+### The ingest ablation
+
+The retrieval ablation holds the index fixed and varies the retriever. A second one,
+`packages/eval/src/ingest-ablation.ts`, holds the retriever fixed and varies how the index was built:
+the chunker, what text is embedded, how vectors are stored, how BM25 tokenizes and weighs, how fusion
+is damped. The golden set is anchored to documents and headings rather than chunk ids, so it
+resolves afresh against every chunking. New chunkings are embedded with the same model run locally
+(ONNX), so the comparison does not spend the live site's quota; it agrees with the production
+vectors at a mean cosine of 0.904, and every row says which encoder produced it.
+Full tables with 95% bootstrap intervals: [docs/INGEST-ABLATION.md](docs/INGEST-ABLATION.md).
+
+| Change | Effect | Reading |
+| --- | --- | --- |
+| Chunks of 200 tokens instead of 400 | hybrid Recall@10 66.6% → 54.9% | clearly worse |
+| No instruction prefix on the query | dense Success@5 86.8% → 71.7% | the largest single effect |
+| float32 instead of int8 | Recall@10 identical, 99.2% of the top 10 shared | int8 is free here, at a quarter of the size |
+| No overlap between chunks | within a point | no measurable effect |
+| Fixed windows instead of structure-aware | Recall@10 69.9% vs 66.6%, but 85% of chunks end mid-sentence | recall level; the boundaries are what differ |
+| No heading path in the embedded text | dense Success@5 92.5% vs 86.8% | a lead against a shipped choice, inside the intervals |
+
+With 53 questions one question moves Success@5 by 1.9 points, so most of these are reported as no
+difference. Two are not, and one is a result that argues against what ships; it is written down
+rather than tuned away.
+
 ---
 
 ## How this was built

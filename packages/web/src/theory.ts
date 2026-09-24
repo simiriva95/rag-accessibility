@@ -322,3 +322,213 @@ export const CORPUS = [
   { source: 'GOV.UK Design System', documents: 92, characters: 405_406 },
   { source: 'WCAG 2.2 specification', documents: 1, characters: 121_898 },
 ] as const;
+
+/**
+ * The build-time half: every algorithm that turns 193 web pages into the four
+ * files the browser loads. Each names the ablation group that measures it, in
+ * ingest-ablation.json, produced by packages/eval/src/ingest-ablation.ts.
+ *
+ * The verdicts are written against those numbers, intervals included. With 53
+ * questions one question moves Success@5 by 1.9 points, so a difference inside
+ * the intervals is reported as no difference.
+ */
+export type IngestStage = {
+  id: string;
+  name: string;
+  /** Tab label. */
+  short: string;
+  family: string;
+  idea: string;
+  how: string[];
+  strengths: string[];
+  tradeoffs: string[];
+  /** Ablation group in ingest-ablation.json, when one measures this stage. */
+  group?: string;
+  verdict: string;
+  references?: Reference[];
+};
+
+export const INGEST: IngestStage[] = [
+  {
+    id: 'normalize',
+    short: 'Normalise',
+    name: 'HTML normalisation',
+    family: 'Parsing · boilerplate removal',
+    idea:
+      'Each page is parsed and reduced to a canonical plain text: one block per line, headings ' +
+      'kept as "### Heading", blocks separated by a blank line. Navigation, footers, tables of ' +
+      'contents and repeated code examples are dropped by tag, class and id. This text is the ' +
+      'single source of truth: chunk offsets, highlights and quote checks all resolve against it.',
+    how: [
+      'Parse with linkedom, walk the DOM, skip furniture (nav, footer, doclinks, GOV.UK example wrappers).',
+      'Take block elements whole (p, li, dt, dd, pre, tr), collapse whitespace, keep heading levels.',
+      'Apply Unicode NFC once, so every later offset refers to the same characters.',
+    ],
+    strengths: [
+      'Plain text the UI can render verbatim, so a highlighted quote sits exactly where it was found.',
+      'Headings survive as structure the chunker can use.',
+      'Cached HTML makes re-runs offline and reproducible.',
+    ],
+    tradeoffs: [
+      'Rules are per source: a new site needs its own skip list.',
+      'Tables become one line per row, which loses column alignment.',
+      'Anything rendered by JavaScript is invisible to it.',
+    ],
+    verdict:
+      '193 documents, 1,746,767 characters. Every chunk of every chunker tested reproduces its ' +
+      'source slice exactly (100% of offsets exact), which is the invariant verification depends on.',
+  },
+  {
+    id: 'chunk',
+    short: 'Chunking',
+    name: 'Structure-aware chunking',
+    family: 'Segmentation',
+    idea:
+      'Documents are cut into passages small enough to embed and specific enough to retrieve. ' +
+      'The shipped chunker never cuts a block, opens a new chunk at a section heading once the ' +
+      'current one is worth retrieving on its own, targets 400 tokens with a hard cap of 480 ' +
+      '(inside the encoder’s 512-token window), and carries 15% of the previous chunk forward.',
+    how: [
+      'Parse blocks with exact offsets; split an oversized block on sentence boundaries.',
+      'Flush at 400 tokens, at a section heading past 250 tokens, or before exceeding 480.',
+      'Carry trailing blocks as overlap, never across a section boundary.',
+      'Content-addressed ids, so annotations survive a re-index.',
+    ],
+    strengths: [
+      '75% of chunks end on a sentence or block boundary, against 15% for fixed windows.',
+      '95% start on a block boundary, so a passage reads as a unit.',
+      'The criterion number in a heading reaches every chunk under it.',
+    ],
+    tradeoffs: [
+      'More code, and more ways to be wrong: three chunker defects were caught by tests before launch.',
+      'Token counts are estimated (3.5 characters per token), not measured by the real tokenizer.',
+      'On recall alone it did not beat fixed windows here.',
+    ],
+    group: 'chunking',
+    verdict:
+      'Halving the chunk size clearly hurts: hybrid Recall@10 falls from 66.6% to 54.9%. Overlap ' +
+      'moves nothing measurable. Fixed windows score as well on recall (69.9%, inside the ' +
+      'interval) but cut 85% of chunks mid-sentence, which is what the generator and the quote ' +
+      'check then have to read. Part of their recall may also be an annotation effect: a window ' +
+      'spanning several headings matches more gold anchors.',
+  },
+  {
+    id: 'header',
+    short: 'Chunk header',
+    name: 'Contextual chunk header',
+    family: 'What text is indexed',
+    idea:
+      'Before a chunk is embedded and indexed, its heading path is prepended: "2.4 Navigable > ' +
+      '2.4.11 Focus Not Obscured > Intent", then the text. The idea is that a chunk about 2.4.11 ' +
+      'which never writes "2.4.11" should still be findable by its number.',
+    how: ['documentText(chunk) = headingPath.join(" > ") + "\\n" + chunk.text, for both BM25 and the encoder.'],
+    strengths: ['Criterion numbers and section names become searchable in every chunk beneath them.'],
+    tradeoffs: [
+      'The same header repeats across every chunk of a section, which blurs them for the encoder.',
+      'Spends part of the 512-token window on text that is not the passage.',
+    ],
+    group: 'header',
+    verdict:
+      'The measurement does not support it. Without the header, dense Success@5 is 92.5% against ' +
+      '86.8% with it. For BM25 the header leaves recall level and lifts nDCG from 0.434 to 0.475. The intervals overlap, so this is a lead ' +
+      'rather than a result, and it was measured with the local encoder; re-embedding without ' +
+      'the header through production is the check before changing what ships.',
+  },
+  {
+    id: 'tokenize',
+    short: 'Tokenizer',
+    name: 'Lexical tokenization',
+    family: 'BM25 vocabulary',
+    idea:
+      'BM25 can only match what the tokenizer emits. Compounds are emitted whole and split ' +
+      '(aria-describedby, aria, describedby; errorMessage, error, message), while dotted ' +
+      'criterion numbers stay whole, because 2, 4 and 11 on their own match every criterion.',
+    how: [
+      'Match runs of letters and digits joined by - _ or .; lowercase after NFC.',
+      'Emit the whole run, then its kebab, snake and camelCase parts.',
+      'Never split a dotted number such as 1.4.3.',
+    ],
+    strengths: ['An exact identifier query matches the whole token and scores high.', 'A partial query still reaches the document through the parts.'],
+    tradeoffs: ['Every compound is indexed several times, which inflates the postings.', 'No stemming: "focused" and "focus" are different terms.'],
+    group: 'tokenizer',
+    verdict:
+      'Against a plain alphanumeric tokenizer: Recall@10 56.9% against 55.4%, MRR 0.530 against ' +
+      '0.503. A small, consistent gain, inside the intervals.',
+  },
+  {
+    id: 'bm25',
+    short: 'BM25',
+    name: 'BM25 index and parameters',
+    family: 'Inverted index · Okapi BM25',
+    idea:
+      'An inverted index maps each term to the chunks containing it and how often. At query time ' +
+      'BM25 sums, over the query terms, an idf weight times a saturating term frequency ' +
+      'normalised by chunk length. k1 sets how fast repetition saturates; b sets how much a long ' +
+      'chunk is penalised.',
+    how: ['Postings stored as flat [docIndex, tf] pairs to keep the JSON small (1.28 MB, 379 KB gzipped).', 'k1 = 1.2, b = 0.75: the textbook defaults, chosen before any tuning.'],
+    strengths: ['Built once, queried in 2 to 3 ms in the browser.', 'Every point of a score can be traced to a term.'],
+    tradeoffs: ['Two parameters that are corpus-dependent.', 'The index is the largest file the site ships.'],
+    group: 'bm25',
+    verdict:
+      'The defaults are not the optimum, but nothing beats them by more than the noise: k1 = 2 ' +
+      'gives 58.4% against 56.9%. Tuning on the same 53 questions the table reports would be ' +
+      'fitting the test set, so the defaults stay.',
+    references: [REF.robertson2009],
+  },
+  {
+    id: 'encode',
+    short: 'Encoding',
+    name: 'Dense encoding',
+    family: 'bge-small-en-v1.5 · bi-encoder',
+    idea:
+      'Each chunk is mapped by a 33M-parameter BERT-style encoder to a 384-dimensional vector, ' +
+      'pooled on the [CLS] token and L2-normalised. The model is asymmetric: queries carry an ' +
+      'instruction prefix and passages do not, because that is how it was trained.',
+    how: [
+      'Passages: embedded once at build time through Workers AI, 100 per request.',
+      `Queries: embedded per question at the edge, prefixed with “${MODELS.queryPrefix.trim()}”.`,
+    ],
+    strengths: ['Small enough to embed the whole corpus on a free tier.', 'Matches meaning, not only words.'],
+    tradeoffs: ['512-token window caps chunk size.', 'An English-only model.', 'A remote call per question.'],
+    group: 'query',
+    verdict:
+      'The prefix is worth keeping: without it Success@5 falls from 86.8% to 71.7%, the largest ' +
+      'single effect in the ingest ablation. The local ONNX encoder used for the chunking rows ' +
+      'agrees with Workers AI at a mean cosine of 0.904: the same model, not bit-identical output.',
+    references: [REF.xiao2023],
+  },
+  {
+    id: 'quantize',
+    short: 'int8',
+    name: 'int8 quantization',
+    family: 'Vector storage',
+    idea:
+      'Each vector is scaled by its own largest component and rounded to 8-bit integers, with ' +
+      'one float scale per vector kept to undo it. A per-vector scale rather than a global one, ' +
+      'because the components of a unit vector in 384 dimensions sit well inside [-1, 1].',
+    how: ['scale = max|vᵢ| / 127, codeᵢ = round(vᵢ / scale).', 'Scored against a float32 query: one dot product per chunk, times its scale.'],
+    strengths: ['4× smaller: 0.6 MB against 2.4 MB, and one binary file instead of JSON.', 'A scan of 1,592 vectors in a few milliseconds.'],
+    tradeoffs: ['Lossy: scores move in the third decimal.', 'Ranking ties can reorder.'],
+    group: 'storage',
+    verdict:
+      'Free at this scale. Recall@10 and Success@5 are identical to float32, MRR 0.594 against ' +
+      '0.604, and the two share 99.2% of their top 10.',
+  },
+  {
+    id: 'fusion',
+    short: 'Fusion k',
+    name: 'Fusion constant',
+    family: 'Reciprocal Rank Fusion, k',
+    idea:
+      'RRF adds 1/(k + rank) from each list. A small k lets the top of one list dominate; a large ' +
+      'k flattens every rank toward the same vote, so agreement between lists decides.',
+    how: ['k = 60, the value from the original paper, over two lists of 30.'],
+    strengths: ['No tuning needed across corpora.'],
+    tradeoffs: ['Treats both retrievers as equally reliable for every query.'],
+    group: 'fusion',
+    verdict:
+      'Flat from k = 10 to k = 200 (Recall@10 65.2% to 65.8%). Only k = 1 is worse, at 81.1% ' +
+      'Success@5 against 84.9%: letting one list’s first place win outright loses.',
+    references: [REF.cormack2009],
+  },
+];

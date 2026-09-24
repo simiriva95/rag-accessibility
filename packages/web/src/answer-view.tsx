@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { statusOf, type Chunk, type SentenceStatus, type VerifiedClaim } from '@rag/core';
+import { RunDiagram } from './run-diagram.tsx';
 import { SourceDialog, type SourceTarget } from './source-dialog.tsx';
 import type { AnswerState, Answered } from './use-answer.ts';
 import type { Retrieval } from './use-retrieval.ts';
@@ -69,6 +70,16 @@ export function AnswerView({ retrieval, state }: { retrieval: Retrieval; state: 
       )}
 
       {state.phase === 'answered' && <Answer result={state.result} onInspect={setTarget} />}
+
+      {/* Keyed on the run, so each new question draws its own graph from the start. */}
+      <div className="mt-8">
+        <RunDiagram
+          key={retrieval.run.query + retrieval.run.timings.total}
+          run={retrieval.run}
+          answer={state}
+          total={retrieval.meta.size}
+        />
+      </div>
 
       <Evidence
         chunks={sources.length > 0 ? sources : retrievedChunks(retrieval)}

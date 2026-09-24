@@ -48,10 +48,11 @@ export const SERIES_LABEL: Record<Series, string> = {
   rerank: 'Hybrid + rerank',
 };
 
-export type Tone = Series | 'ink';
+export type Tone = Series | 'ink' | 'muted';
 
 const fill: Record<Tone, string> = {
   ink: 'bg-ink',
+  muted: 'bg-line-strong',
   dense: 'bg-dense',
   lexical: 'bg-lexical',
   hybrid: 'bg-hybrid',
@@ -233,7 +234,7 @@ export function GroupedColumns({
   let i = 0;
 
   return (
-    <div className="grid grid-cols-3 gap-4">
+    <div className="grid gap-4" style={{ gridTemplateColumns: `repeat(${groups.length}, minmax(0, 1fr))` }}>
       {groups.map((group) => (
         <div key={group.label}>
           <div className="flex h-48 items-end justify-center gap-1 border-b border-line-strong">

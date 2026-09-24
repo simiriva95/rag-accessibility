@@ -132,7 +132,7 @@ function parseBlocks(text: string, maxTokens: number): Block[] {
 }
 
 /** Deepest heading wins: the criterion beats the guideline it sits under. */
-function scRefOf(headingPath: string[]): string | undefined {
+export function scRefOf(headingPath: string[]): string | undefined {
   for (let i = headingPath.length - 1; i >= 0; i--) {
     const m = SC_REF.exec(headingPath[i]!);
     if (m) return m[1] ?? m[2];

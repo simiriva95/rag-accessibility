@@ -12,6 +12,7 @@
     "linkedom": "^0.18.12"
   },
   "exports": {
-    "./embed": "./src/embed.ts"
+    "./embed": "./src/embed.ts",
+    "./chunk": "./src/chunk.ts"
   }
 }

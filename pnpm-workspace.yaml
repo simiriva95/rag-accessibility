@@ -3,4 +3,6 @@ packages:
 
 allowBuilds:
   esbuild: true
+  onnxruntime-node: false
+  protobufjs: false
   workerd: true

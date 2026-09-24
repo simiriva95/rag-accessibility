@@ -97,6 +97,7 @@ export function PipelineFigure({ retrieval, answer }: { retrieval: Retrieval; an
       <details className="mt-5 text-sm">
         <summary className="cursor-pointer text-ink-2 hover:text-ink">Table view</summary>
         <DataTable
+          label="Stage timings"
           head={['Stage', 'Runs in', 'Time']}
           rows={rows.map((row) => [row.label, row.where, row.state === 'done' ? fmt(row.ms) : row.state])}
         />

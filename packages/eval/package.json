@@ -5,10 +5,14 @@
   "type": "module",
   "scripts": {
     "golden": "node src/resolve.ts",
-    "ablation": "node src/harness.ts"
+    "ablation": "node src/harness.ts",
+    "ingest-ablation": "node src/ingest-ablation.ts"
   },
   "dependencies": {
     "@rag/core": "workspace:*",
     "@rag/ingest": "workspace:*"
+  },
+  "devDependencies": {
+    "@huggingface/transformers": "^4.3.0"
   }
 }

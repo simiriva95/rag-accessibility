@@ -1,0 +1,688 @@
+{
+  "generated": "2026-09-24",
+  "questions": 53,
+  "calibration": {
+    "meanCosineLocalVsProduction": 0.9036829200868794,
+    "int8Top10Agreement": 0.9924528301886791
+  },
+  "chunking": [
+    {
+      "id": "structure",
+      "name": "Structure-aware, 400 tokens, 15% overlap",
+      "description": "The shipped chunker: blocks and headings respected, a section opens a new chunk once the current one is worth retrieving.",
+      "unresolved": 0,
+      "chunks": 1592,
+      "medianTokens": 372,
+      "p10Tokens": 231,
+      "p90Tokens": 457,
+      "offsetsExact": 1,
+      "cleanEnds": 0.7506281407035176,
+      "cleanStarts": 0.949748743718593,
+      "withScRef": 0.6959798994974874
+    },
+    {
+      "id": "structure-no-overlap",
+      "name": "Structure-aware, no overlap",
+      "description": "The same chunker with the overlap removed.",
+      "unresolved": 0,
+      "chunks": 1587,
+      "medianTokens": 374,
+      "p10Tokens": 231,
+      "p90Tokens": 450,
+      "offsetsExact": 1,
+      "cleanEnds": 0.7605545053560177,
+      "cleanStarts": 0.9495904221802143,
+      "withScRef": 0.6950220541902962
+    },
+    {
+      "id": "structure-small",
+      "name": "Structure-aware, 200 tokens",
+      "description": "Half the target size: more, narrower chunks.",
+      "unresolved": 0,
+      "chunks": 3122,
+      "medianTokens": 188,
+      "p10Tokens": 121,
+      "p90Tokens": 229,
+      "offsetsExact": 1,
+      "cleanEnds": 0.7283792440743113,
+      "cleanStarts": 0.8894939141575913,
+      "withScRef": 0.7101217168481743
+    },
+    {
+      "id": "fixed",
+      "name": "Fixed windows, 400 tokens, 15% overlap",
+      "description": "The naive baseline: character windows blind to headings and blocks.",
+      "unresolved": 0,
+      "chunks": 1531,
+      "medianTokens": 398,
+      "p10Tokens": 308,
+      "p90Tokens": 400,
+      "offsetsExact": 1,
+      "cleanEnds": 0.15284128020901372,
+      "cleanStarts": 0.12606139777922926,
+      "withScRef": 0.6988896146309601
+    }
+  ],
+  "rows": [
+    {
+      "id": "structure:bm25",
+      "name": "Structure-aware, 400 tokens, 15% overlap, BM25",
+      "group": "chunking",
+      "encoder": "none",
+      "recall10Ci": [
+        0.47311320754716973,
+        0.6673180592991913
+      ],
+      "success5Ci": [
+        0.5849056603773585,
+        0.8301886792452831
+      ],
+      "recall10": 0.5694294699011679,
+      "success5": 0.7169811320754716,
+      "mrr": 0.5303940032713617,
+      "ndcg10": 0.47481500337234844,
+      "identifier": 0.6930555555555555,
+      "conceptual": 0.45466666666666666
+    },
+    {
+      "id": "structure:dense",
+      "name": "Structure-aware, 400 tokens, 15% overlap, dense",
+      "group": "chunking",
+      "encoder": "local",
+      "recall10Ci": [
+        0.5670260557053007,
+        0.7289308176100631
+      ],
+      "success5Ci": [
+        0.7735849056603774,
+        0.9622641509433962
+      ],
+      "recall10": 0.6492362982929021,
+      "success5": 0.8679245283018868,
+      "mrr": 0.6024134932153798,
+      "ndcg10": 0.5431898416869618,
+      "identifier": 0.5407407407407407,
+      "conceptual": 0.7239999999999999
+    },
+    {
+      "id": "structure:hybrid",
+      "name": "Structure-aware, 400 tokens, 15% overlap, hybrid",
+      "group": "chunking",
+      "encoder": "local",
+      "recall10Ci": [
+        0.5873614854746931,
+        0.7433662773285417
+      ],
+      "success5Ci": [
+        0.7924528301886793,
+        0.9622641509433962
+      ],
+      "recall10": 0.6661126085654389,
+      "success5": 0.8867924528301887,
+      "mrr": 0.647458751939884,
+      "ndcg10": 0.562420326573567,
+      "identifier": 0.672222222222222,
+      "conceptual": 0.6393333333333334
+    },
+    {
+      "id": "embed:no-heading",
+      "name": "Dense, chunk text only",
+      "group": "header",
+      "encoder": "local",
+      "recall10Ci": [
+        0.5813117699910153,
+        0.7291105121293802
+      ],
+      "success5Ci": [
+        0.8490566037735849,
+        0.9811320754716981
+      ],
+      "recall10": 0.6553459119496855,
+      "success5": 0.9245283018867925,
+      "mrr": 0.6717568594927086,
+      "ndcg10": 0.5368920415542956,
+      "identifier": 0.6148148148148148,
+      "conceptual": 0.7160000000000001
+    },
+    {
+      "id": "embed:heading",
+      "name": "Dense, heading path + chunk text (shipped)",
+      "group": "header",
+      "encoder": "local",
+      "recall10Ci": [
+        0.5670260557053007,
+        0.7289308176100631
+      ],
+      "success5Ci": [
+        0.7735849056603774,
+        0.9622641509433962
+      ],
+      "recall10": 0.6492362982929021,
+      "success5": 0.8679245283018868,
+      "mrr": 0.6024134932153798,
+      "ndcg10": 0.5431898416869618,
+      "identifier": 0.5407407407407407,
+      "conceptual": 0.7239999999999999
+    },
+    {
+      "id": "bm25:no-heading",
+      "name": "BM25, chunk text only",
+      "group": "header",
+      "encoder": "none",
+      "recall10Ci": [
+        0.478414195867026,
+        0.664210841569332
+      ],
+      "success5Ci": [
+        0.6037735849056604,
+        0.8490566037735849
+      ],
+      "recall10": 0.5706573824498353,
+      "success5": 0.7358490566037735,
+      "mrr": 0.5368158998124242,
+      "ndcg10": 0.4341325050531457,
+      "identifier": 0.7393518518518518,
+      "conceptual": 0.4506666666666667
+    },
+    {
+      "id": "bm25:heading",
+      "name": "BM25, heading path + chunk text (shipped)",
+      "group": "header",
+      "encoder": "none",
+      "recall10Ci": [
+        0.47311320754716973,
+        0.6673180592991913
+      ],
+      "success5Ci": [
+        0.5849056603773585,
+        0.8301886792452831
+      ],
+      "recall10": 0.5694294699011679,
+      "success5": 0.7169811320754716,
+      "mrr": 0.5303940032713617,
+      "ndcg10": 0.47481500337234844,
+      "identifier": 0.6930555555555555,
+      "conceptual": 0.45466666666666666
+    },
+    {
+      "id": "query:no-prefix",
+      "name": "Query without the instruction prefix",
+      "group": "query",
+      "encoder": "local",
+      "recall10Ci": [
+        0.5458520515124289,
+        0.7203054806828391
+      ],
+      "success5Ci": [
+        0.5849056603773585,
+        0.8301886792452831
+      ],
+      "recall10": 0.6356094639113508,
+      "success5": 0.7169811320754716,
+      "mrr": 0.5752413544033965,
+      "ndcg10": 0.5275124840696959,
+      "identifier": 0.5685185185185184,
+      "conceptual": 0.664
+    },
+    {
+      "id": "query:prefix",
+      "name": "Query with the instruction prefix (shipped)",
+      "group": "query",
+      "encoder": "local",
+      "recall10Ci": [
+        0.5670260557053007,
+        0.7289308176100631
+      ],
+      "success5Ci": [
+        0.7735849056603774,
+        0.9622641509433962
+      ],
+      "recall10": 0.6492362982929021,
+      "success5": 0.8679245283018868,
+      "mrr": 0.6024134932153798,
+      "ndcg10": 0.5431898416869618,
+      "identifier": 0.5407407407407407,
+      "conceptual": 0.7239999999999999
+    },
+    {
+      "id": "structure-no-overlap:bm25",
+      "name": "Structure-aware, no overlap, BM25",
+      "group": "chunking",
+      "encoder": "none",
+      "recall10Ci": [
+        0.4669811320754717,
+        0.6620619946091646
+      ],
+      "success5Ci": [
+        0.5849056603773585,
+        0.8301886792452831
+      ],
+      "recall10": 0.5631401617250674,
+      "success5": 0.7169811320754716,
+      "mrr": 0.5290815079605311,
+      "ndcg10": 0.47786084202741386,
+      "identifier": 0.6837962962962963,
+      "conceptual": 0.4413333333333334
+    },
+    {
+      "id": "structure-no-overlap:dense",
+      "name": "Structure-aware, no overlap, dense",
+      "group": "chunking",
+      "encoder": "local",
+      "recall10Ci": [
+        0.5506738544474393,
+        0.7221922731356694
+      ],
+      "success5Ci": [
+        0.7358490566037735,
+        0.9433962264150944
+      ],
+      "recall10": 0.6372866127583109,
+      "success5": 0.8490566037735849,
+      "mrr": 0.5964827440410126,
+      "ndcg10": 0.5384977886250939,
+      "identifier": 0.5296296296296297,
+      "conceptual": 0.7
+    },
+    {
+      "id": "structure-no-overlap:hybrid",
+      "name": "Structure-aware, no overlap, hybrid",
+      "group": "chunking",
+      "encoder": "local",
+      "recall10Ci": [
+        0.5913746630727761,
+        0.7433662773285417
+      ],
+      "success5Ci": [
+        0.7547169811320755,
+        0.9433962264150944
+      ],
+      "recall10": 0.667056004791854,
+      "success5": 0.8679245283018868,
+      "mrr": 0.654770072694601,
+      "ndcg10": 0.5617627965113673,
+      "identifier": 0.6796296296296296,
+      "conceptual": 0.636
+    },
+    {
+      "id": "structure-small:bm25",
+      "name": "Structure-aware, 200 tokens, BM25",
+      "group": "chunking",
+      "encoder": "none",
+      "recall10Ci": [
+        0.3672955974842767,
+        0.5444968553459122
+      ],
+      "success5Ci": [
+        0.5283018867924528,
+        0.7735849056603774
+      ],
+      "recall10": 0.4555031446540881,
+      "success5": 0.660377358490566,
+      "mrr": 0.5373817986441387,
+      "ndcg10": 0.44431373405100455,
+      "identifier": 0.5847222222222221,
+      "conceptual": 0.3406666666666667
+    },
+    {
+      "id": "structure-small:dense",
+      "name": "Structure-aware, 200 tokens, dense",
+      "group": "chunking",
+      "encoder": "local",
+      "recall10Ci": [
+        0.42138364779874216,
+        0.5889937106918238
+      ],
+      "success5Ci": [
+        0.6415094339622641,
+        0.8679245283018868
+      ],
+      "recall10": 0.5047169811320755,
+      "success5": 0.7547169811320755,
+      "mrr": 0.5806489262371615,
+      "ndcg10": 0.5096429694120476,
+      "identifier": 0.5,
+      "conceptual": 0.466
+    },
+    {
+      "id": "structure-small:hybrid",
+      "name": "Structure-aware, 200 tokens, hybrid",
+      "group": "chunking",
+      "encoder": "local",
+      "recall10Ci": [
+        0.4685534591194969,
+        0.6320754716981133
+      ],
+      "success5Ci": [
+        0.660377358490566,
+        0.8679245283018868
+      ],
+      "recall10": 0.549056603773585,
+      "success5": 0.7735849056603774,
+      "mrr": 0.6324822267386084,
+      "ndcg10": 0.515507806953641,
+      "identifier": 0.5555555555555556,
+      "conceptual": 0.52
+    },
+    {
+      "id": "fixed:bm25",
+      "name": "Fixed windows, 400 tokens, 15% overlap, BM25",
+      "group": "chunking",
+      "encoder": "none",
+      "recall10Ci": [
+        0.46370170709793346,
+        0.6644204851752021
+      ],
+      "success5Ci": [
+        0.5471698113207547,
+        0.7924528301886793
+      ],
+      "recall10": 0.563611859838275,
+      "success5": 0.6792452830188679,
+      "mrr": 0.5224337939883469,
+      "ndcg10": 0.47327614761084014,
+      "identifier": 0.7259259259259259,
+      "conceptual": 0.4106666666666667
+    },
+    {
+      "id": "fixed:dense",
+      "name": "Fixed windows, 400 tokens, 15% overlap, dense",
+      "group": "chunking",
+      "encoder": "local",
+      "recall10Ci": [
+        0.5751572327044026,
+        0.7526729559748426
+      ],
+      "success5Ci": [
+        0.6981132075471698,
+        0.9056603773584906
+      ],
+      "recall10": 0.6642033542976938,
+      "success5": 0.8113207547169812,
+      "mrr": 0.6437991419371757,
+      "ndcg10": 0.5584396525153082,
+      "identifier": 0.525462962962963,
+      "conceptual": 0.7293333333333333
+    },
+    {
+      "id": "fixed:hybrid",
+      "name": "Fixed windows, 400 tokens, 15% overlap, hybrid",
+      "group": "chunking",
+      "encoder": "local",
+      "recall10Ci": [
+        0.6169811320754719,
+        0.7790880503144654
+      ],
+      "success5Ci": [
+        0.7735849056603774,
+        0.9433962264150944
+      ],
+      "recall10": 0.6992138364779872,
+      "success5": 0.8679245283018868,
+      "mrr": 0.6474842767295598,
+      "ndcg10": 0.5773040361818043,
+      "identifier": 0.7143518518518518,
+      "conceptual": 0.6759999999999999
+    },
+    {
+      "id": "store:float32",
+      "name": "float32 vectors, 2.4 MB",
+      "group": "storage",
+      "encoder": "production",
+      "recall10Ci": [
+        0.5625935908954776,
+        0.7272536687631028
+      ],
+      "success5Ci": [
+        0.6226415094339622,
+        0.8490566037735849
+      ],
+      "recall10": 0.647738843965259,
+      "success5": 0.7358490566037735,
+      "mrr": 0.6038323311908217,
+      "ndcg10": 0.5435269516550641,
+      "identifier": 0.5407407407407407,
+      "conceptual": 0.6973333333333334
+    },
+    {
+      "id": "store:int8",
+      "name": "int8 vectors, 0.6 MB (shipped)",
+      "group": "storage",
+      "encoder": "production",
+      "recall10Ci": [
+        0.5625935908954776,
+        0.7272536687631028
+      ],
+      "success5Ci": [
+        0.6226415094339622,
+        0.8490566037735849
+      ],
+      "recall10": 0.647738843965259,
+      "success5": 0.7358490566037735,
+      "mrr": 0.5943983689266708,
+      "ndcg10": 0.5411772807549852,
+      "identifier": 0.5407407407407407,
+      "conceptual": 0.6973333333333334
+    },
+    {
+      "id": "tokenizer:plain",
+      "name": "Plain tokenizer: alphanumeric runs, 2.4.11 split into 2, 4, 11",
+      "group": "tokenizer",
+      "encoder": "none",
+      "recall10Ci": [
+        0.454664570230608,
+        0.6573225516621743
+      ],
+      "success5Ci": [
+        0.5849056603773585,
+        0.8301886792452831
+      ],
+      "recall10": 0.5541254866726565,
+      "success5": 0.7169811320754716,
+      "mrr": 0.5027870400040211,
+      "ndcg10": 0.4559802113027728,
+      "identifier": 0.6819444444444445,
+      "conceptual": 0.4346666666666667
+    },
+    {
+      "id": "tokenizer:shipped",
+      "name": "Shipped tokenizer: compounds whole and split, dotted numbers whole",
+      "group": "tokenizer",
+      "encoder": "none",
+      "recall10Ci": [
+        0.47311320754716973,
+        0.6673180592991913
+      ],
+      "success5Ci": [
+        0.5849056603773585,
+        0.8301886792452831
+      ],
+      "recall10": 0.5694294699011679,
+      "success5": 0.7169811320754716,
+      "mrr": 0.5303940032713617,
+      "ndcg10": 0.47481500337234844,
+      "identifier": 0.6930555555555555,
+      "conceptual": 0.45466666666666666
+    },
+    {
+      "id": "bm25:k1=1.2,b=0",
+      "name": "BM25 k1 = 1.2, b = 0",
+      "group": "bm25",
+      "encoder": "none",
+      "recall10Ci": [
+        0.48003144654088065,
+        0.6775157232704403
+      ],
+      "success5Ci": [
+        0.6037735849056604,
+        0.8301886792452831
+      ],
+      "recall10": 0.576527403414196,
+      "success5": 0.7169811320754716,
+      "mrr": 0.537982962899722,
+      "ndcg10": 0.47647875810902723,
+      "identifier": 0.7115740740740741,
+      "conceptual": 0.4746666666666667
+    },
+    {
+      "id": "bm25:k1=1.2,b=0.75",
+      "name": "BM25 k1 = 1.2, b = 0.75 (shipped)",
+      "group": "bm25",
+      "encoder": "none",
+      "recall10Ci": [
+        0.47311320754716973,
+        0.6673180592991913
+      ],
+      "success5Ci": [
+        0.5849056603773585,
+        0.8301886792452831
+      ],
+      "recall10": 0.5694294699011679,
+      "success5": 0.7169811320754716,
+      "mrr": 0.5303940032713617,
+      "ndcg10": 0.47481500337234844,
+      "identifier": 0.6930555555555555,
+      "conceptual": 0.45466666666666666
+    },
+    {
+      "id": "bm25:k1=1.2,b=1",
+      "name": "BM25 k1 = 1.2, b = 1",
+      "group": "bm25",
+      "encoder": "none",
+      "recall10Ci": [
+        0.473569931117101,
+        0.6662848158131178
+      ],
+      "success5Ci": [
+        0.6415094339622641,
+        0.8679245283018868
+      ],
+      "recall10": 0.5685908954776879,
+      "success5": 0.7547169811320755,
+      "mrr": 0.5013789834792813,
+      "ndcg10": 0.47108670589662105,
+      "identifier": 0.7023148148148148,
+      "conceptual": 0.45466666666666666
+    },
+    {
+      "id": "bm25:k1=0.6,b=0.75",
+      "name": "BM25 k1 = 0.6, b = 0.75",
+      "group": "bm25",
+      "encoder": "none",
+      "recall10Ci": [
+        0.44752171308775085,
+        0.6413746630727761
+      ],
+      "success5Ci": [
+        0.5660377358490566,
+        0.8113207547169812
+      ],
+      "recall10": 0.5440625935908955,
+      "success5": 0.6981132075471698,
+      "mrr": 0.5199416411680562,
+      "ndcg10": 0.45803909251405733,
+      "identifier": 0.674537037037037,
+      "conceptual": 0.4466666666666667
+    },
+    {
+      "id": "bm25:k1=2,b=0.75",
+      "name": "BM25 k1 = 2, b = 0.75",
+      "group": "bm25",
+      "encoder": "none",
+      "recall10Ci": [
+        0.49236298292902053,
+        0.6795148247978436
+      ],
+      "success5Ci": [
+        0.6037735849056604,
+        0.8490566037735849
+      ],
+      "recall10": 0.5839173405211141,
+      "success5": 0.7358490566037735,
+      "mrr": 0.5486335729260257,
+      "ndcg10": 0.4902520851154061,
+      "identifier": 0.6814814814814816,
+      "conceptual": 0.48133333333333334
+    },
+    {
+      "id": "rrf:k=1",
+      "name": "RRF k = 1",
+      "group": "fusion",
+      "encoder": "production",
+      "recall10Ci": [
+        0.558041329739443,
+        0.7261755016471998
+      ],
+      "success5Ci": [
+        0.6981132075471698,
+        0.9056603773584906
+      ],
+      "recall10": 0.6456723569931119,
+      "success5": 0.8113207547169812,
+      "mrr": 0.6289371529937569,
+      "ndcg10": 0.5573361447788487,
+      "identifier": 0.624074074074074,
+      "conceptual": 0.628
+    },
+    {
+      "id": "rrf:k=10",
+      "name": "RRF k = 10",
+      "group": "fusion",
+      "encoder": "production",
+      "recall10Ci": [
+        0.5693321353698712,
+        0.7327044025157233
+      ],
+      "success5Ci": [
+        0.7358490566037735,
+        0.9433962264150944
+      ],
+      "recall10": 0.6529050613956274,
+      "success5": 0.8490566037735849,
+      "mrr": 0.638788491382831,
+      "ndcg10": 0.5586122299373718,
+      "identifier": 0.6425925925925925,
+      "conceptual": 0.626
+    },
+    {
+      "id": "rrf:k=60",
+      "name": "RRF k = 60 (shipped)",
+      "group": "fusion",
+      "encoder": "production",
+      "recall10Ci": [
+        0.569362084456424,
+        0.7317610062893083
+      ],
+      "success5Ci": [
+        0.7547169811320755,
+        0.9433962264150944
+      ],
+      "recall10": 0.6516471997604075,
+      "success5": 0.8490566037735849,
+      "mrr": 0.6294893000081679,
+      "ndcg10": 0.5501362353330285,
+      "identifier": 0.661111111111111,
+      "conceptual": 0.618
+    },
+    {
+      "id": "rrf:k=200",
+      "name": "RRF k = 200",
+      "group": "fusion",
+      "encoder": "production",
+      "recall10Ci": [
+        0.5811320754716981,
+        0.7315214135968854
+      ],
+      "success5Ci": [
+        0.7547169811320755,
+        0.9433962264150944
+      ],
+      "recall10": 0.657936507936508,
+      "success5": 0.8490566037735849,
+      "mrr": 0.6296608265947888,
+      "ndcg10": 0.5516514707712835,
+      "identifier": 0.6518518518518518,
+      "conceptual": 0.6379999999999999
+    }
+  ]
+}

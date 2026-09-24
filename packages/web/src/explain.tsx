@@ -1,6 +1,8 @@
 import { RRF_K, tokenize, type Scored, type VerifiedClaim } from '@rag/core';
 import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
 import type { ChunkMeta } from './retrieval.worker.ts';
+import { IngestView } from './ingest-view.tsx';
+import { RunDiagram } from './run-diagram.tsx';
 import { Tabs } from './tabs.tsx';
 import {
   ABLATION,
@@ -40,6 +42,7 @@ const STEPS = [
 ];
 
 const REFERENCE = [
+  { id: 'ingestion', label: 'How the index was built' },
   { id: 'method', label: 'The six techniques' },
   { id: 'evaluation', label: 'Evaluation' },
   { id: 'system', label: 'System design' },
@@ -81,6 +84,7 @@ export function Explain({ retrieval, answer }: { retrieval: Retrieval; answer: A
             question’s own numbers. The reference material below is always here.
           </p>
         )}
+        <IngestView />
         <Paradigms />
         <Evaluation />
         <SystemDesign />
@@ -198,6 +202,10 @@ function Walkthrough({ run, meta, answer }: { run: Run; meta: Map<string, ChunkM
       >
         What happened to “{run.query}”
       </SectionHeading>
+
+      <div className="mt-8">
+        <RunDiagram key={run.query + run.timings.total} run={run} answer={answer} total={meta.size} />
+      </div>
 
       {/* Keyed on the run, so a new question replays the charts rather than jumping to new values. */}
       <ol key={run.query + run.timings.total} className="mt-12 border-l border-line">
@@ -715,6 +723,7 @@ function VerifyStep({ answer, meta }: { answer: AnswerState; meta: Map<string, C
             />
           </Figure>
           <DataTable
+            label="Every claim and what each check found"
             head={['Claim', 'Quote', 'Span', 'Entailment', 'Status']}
             rows={claims.map((claim) => [
               <span key="s" className="block max-w-sm">
@@ -828,7 +837,7 @@ function ParadigmPanel({ paradigm }: { paradigm: Paradigm }) {
         {row && series && (
           <Figure
             title="Measured on this corpus"
-            caption="This configuration alone, over the 55 answerable golden questions."
+            caption="This configuration alone, over the 53 answerable golden questions."
             table={{
               head: ['Metric', 'Value'],
               rows: [
@@ -897,7 +906,7 @@ function Evaluation() {
     <section aria-labelledby="evaluation">
       <SectionHeading
         id="evaluation"
-        lead="An ablation over 60 hand-annotated questions and 1,592 chunks: each retriever alone, then fused, then reranked. Five questions have no answer in the corpus and are excluded, leaving 55."
+        lead="An ablation over 60 hand-annotated questions and 1,592 chunks: each retriever alone, then fused, then reranked. Seven questions have no answer in the corpus and are excluded, leaving 53."
       >
         How the combination was justified
       </SectionHeading>

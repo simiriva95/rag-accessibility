@@ -267,7 +267,8 @@ async function main() {
     'Recall counts the chunks annotated as *primary* — the ones that actually answer the',
     'question — with the denominator capped at k, so a question whose answer spans more',
     'chunks than k is not penalised for it. nDCG@10 uses the graded annotation: primary',
-    'chunks score 2, same-document context scores 1. The five refusal questions have no',
+    'chunks score 2, same-document context scores 1. The ' +
+      `${questions.filter((q) => q.kind === 'refusal').length} refusal questions have no`,
     'relevant chunk and are excluded from every column.',
     '',
     table(rows),
