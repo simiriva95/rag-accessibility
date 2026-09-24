@@ -470,11 +470,6 @@ const sourceBlock = (sources: Chunkish[]) =>
     )
     .join('\n\n');
 
-/** Repeated after the question, where a model is likeliest to act on it. */
-const REMINDER: Record<AnswerLanguage, string> = {
-  en: 'Remember: every WCAG threshold with its level and criterion, as in "(Level AA, 1.4.3)"; the level is in the source title. Naming the criterion in the sentence does not replace the claim: every factual sentence still needs its entry in "claims", with a quote copied exactly from the source text.',
-  it: 'Ricorda: ogni soglia WCAG con il suo livello e il criterio, come "(Livello AA, 1.4.3)"; il livello è nel titolo della fonte. Nominare il criterio nella frase non sostituisce la citazione: ogni frase fattuale deve comunque avere la sua voce in "claims", con un "quote" in inglese copiato esattamente dal testo della fonte.',
-};
 
 /** `model` names whichever model in the chain actually answered, so the UI can say which one did. */
 export type AnswerResult = (ParsedAnswer & { model: string }) | { degraded: { reason: string } };
@@ -526,7 +521,7 @@ export async function answer(
   try {
     const attempt = await generateWith(env, {
       system: SYSTEM_PROMPT + LANGUAGE_RULE[language],
-      user: `${sourceBlock(sources)}\n\nQuestion: ${question}\n\n${REMINDER[language]}`,
+      user: `${sourceBlock(sources)}\n\nQuestion: ${question}`,
       schema: ANSWER_SCHEMA,
     }, modelsOf(env), uncited);
 

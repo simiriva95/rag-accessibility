@@ -377,3 +377,23 @@ describe('a quote found in more than one cited chunk', () => {
     expect(result!.entailment).toBe(0.5);
   });
 });
+
+describe('a definition-list item quoted as "Term: definition"', () => {
+  const text = 'Except for the following:\n\nLarge Text\n\nLarge-scale text has a contrast ratio of at least 3:1;\n\nIncidental\n\nDecoration has no requirement.';
+  const dl = chunk({ text, charStart: 0, charEnd: text.length });
+
+  it('is found when the term is the line right above the definition, and the span is the definition', () => {
+    const span = locateQuote('Large Text: Large-scale text has a contrast ratio of at least 3:1;', dl);
+    expect(span).toBeDefined();
+    expect(text.slice(span!.start, span!.end)).toBe('Large-scale text has a contrast ratio of at least 3:1;');
+  });
+
+  it('is rejected when the term is not the line right above', () => {
+    expect(locateQuote('Incidental: Large-scale text has a contrast ratio of at least 3:1;', dl)).toBeUndefined();
+    expect(locateQuote('Except for the following: Large-scale text has a contrast ratio of at least 3:1;', dl)).toBeUndefined();
+  });
+
+  it('is rejected when the definition is not exact', () => {
+    expect(locateQuote('Large Text: Large-scale text has a contrast ratio of at least 4.5:1;', dl)).toBeUndefined();
+  });
+});

@@ -95,6 +95,11 @@ describe('citation markers in sentences', () => {
     expect(answer.claims[0]!.sentence).toBe('Large text needs 3:1.');
   });
 
+  it('drops the Italian and "source" forms too', () => {
+    expect(parse('Il testo grande richiede 3:1. [cita 7354e11ec034471b]').sentences).toEqual(['Il testo grande richiede 3:1.']);
+    expect(parse('Large text needs 3:1. [source 7354e11ec034471b]').sentences).toEqual(['Large text needs 3:1.']);
+  });
+
   it('leaves bracketed words that are the model’s own', () => {
     expect(parse('Use a label [not a placeholder].').sentences).toEqual(['Use a label [not a placeholder].']);
   });

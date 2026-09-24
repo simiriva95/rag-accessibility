@@ -180,6 +180,13 @@ bug wearing the costume of rigour.
 
 **Case is not normalized.** "Verbatim" is the claim being made.
 
+**One joined form is accepted, and only one.** WCAG writes its exceptions as definition lists,
+`<dt>Large Text</dt><dd>Large-scale text…</dd>`, which normalize to the term on its own line and the
+definition below it. Models quote that item as `"Large Text: Large-scale text…"` — Llama 4 Scout did
+in every run measured. That form is accepted when the term is the whole line immediately above the
+definition and both match exactly; the highlight covers the definition alone. Two real fragments
+from anywhere else are still a stitch, and the fabrication probe still rejects every one of them.
+
 Normalization also has to be *reversible*, or a quote can be matched and never highlighted. Two
 bugs found by tests while building that: normalizing per character cannot compose (`e` + U+0301
 never equals `é`, losing the one equivalence NFC exists to provide), and because composing turns

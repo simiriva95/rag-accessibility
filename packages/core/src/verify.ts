@@ -162,19 +162,53 @@ export function normalizeForMatch(source: string): Normalized {
  * Returns undefined when the quote is not literally present.
  */
 export function locateQuote(quote: string, chunk: Chunk): { start: number; end: number } | undefined {
+  return locateExact(quote, chunk) ?? locateDefinition(quote, chunk);
+}
+
+/** Every place the normalized quote occurs, as offsets into the normalized document. */
+function occurrences(quote: string, chunk: Chunk): { start: number; end: number }[] {
   const needle = normalizeForMatch(quote).text;
-  if (needle === '') return undefined;
+  if (needle === '') return [];
 
   const haystack = normalizeForMatch(chunk.text);
-  const at = haystack.text.indexOf(needle);
-  if (at === -1) return undefined;
+  const found: { start: number; end: number }[] = [];
+  for (let at = haystack.text.indexOf(needle); at !== -1; at = haystack.text.indexOf(needle, at + 1)) {
+    // End is exclusive, and read from the map rather than computed, so a
+    // composed character at the end of the match is covered in full.
+    found.push({
+      start: chunk.charStart + haystack.starts[at]!,
+      end: chunk.charStart + haystack.ends[at + needle.length - 1]!,
+    });
+  }
+  return found;
+}
 
-  // End is exclusive, and read from the map rather than computed, so a composed
-  // character at the end of the match is covered in full.
-  return {
-    start: chunk.charStart + haystack.starts[at]!,
-    end: chunk.charStart + haystack.ends[at + needle.length - 1]!,
-  };
+const locateExact = (quote: string, chunk: Chunk) => occurrences(quote, chunk)[0];
+
+/**
+ * A definition-list item quoted the way it reads: "Term: definition".
+ *
+ * WCAG writes its exceptions as <dt>Large Text</dt><dd>Large-scale text…</dd>,
+ * which normalizes to the term on a line of its own and the definition as the
+ * next block. Models quote that item as "Large Text: Large-scale text…" far
+ * more often than not; measured, Llama 4 Scout did so in every run. This is
+ * the one joined form accepted, and it is narrow: the term must be the whole
+ * line immediately before the definition, both must match exactly, and the
+ * span covers the definition alone. Two fragments from anywhere else in the
+ * chunk, or a term that is not the line right above, are still rejected.
+ */
+function locateDefinition(quote: string, chunk: Chunk): { start: number; end: number } | undefined {
+  const parts = quote.match(/^([^:\n]{1,60}):\s+([\s\S]+)$/);
+  if (!parts) return undefined;
+  const term = normalizeForMatch(parts[1]!).text.trim();
+  if (term === '') return undefined;
+
+  for (const span of occurrences(parts[2]!, chunk)) {
+    const before = chunk.text.slice(0, span.start - chunk.charStart);
+    const previous = before.match(/(?:^|\n)([^\n]*)\n\s*$/)?.[1];
+    if (previous !== undefined && normalizeForMatch(previous).text.trim() === term) return span;
+  }
+  return undefined;
 }
 
 /** Phase one: which cited chunks hold the quote, and where the first one is. */

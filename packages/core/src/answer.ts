@@ -120,7 +120,8 @@ export function parseModelAnswer(raw: unknown): ParsedAnswer {
  * holding nothing but those is removed; any other bracketed text is the
  * model's words and stays.
  */
-const MARKER = /\s*\[(?:claims? \d+(?:,\s*\d+)*|[0-9a-f]{16}(?:,\s*[0-9a-f]{16})*)\]\s*$/i;
+const MARKER =
+  /\s*\[(?:(?:claims?|citazion[ei]|cita|fonte|source|sources)\s+)?(?:\d+(?:,\s*\d+)*|[0-9a-f]{16}(?:,\s*[0-9a-f]{16})*)\]\s*$/i;
 
 const stripMarkers = (sentence: string): string => {
   let out = sentence;
