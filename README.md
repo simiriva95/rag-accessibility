@@ -50,35 +50,22 @@ far down the first right answer sits — goes from 0.514 to 0.739.
 
 ## The retrieval debugger
 
-<!--
-  TODO: GIF. It needs the reranker running, so it waits on credentials — the movement between the
-  fused column and the final set is the thing worth recording, and with no reranker every result
-  holds its rank. Capture: ask "how much colour contrast does large text need", open the Retrieval
-  tab, record the columns and the curves redrawing.
--->
+![The retrieval debugger: four columns — dense, BM25, fused, reranked — filling in for the question
+"how much colour contrast does large text need", with the reranker's movement drawn as curves, and
+a selected candidate showing its rank at every stage.](docs/media/retrieval-debugger.gif)
 
-Four columns, left to right in the order the pipeline runs them, each with its own latency. This
-is the app as it renders today, with no credentials configured — the reranker has never run, so
-nothing has been invented to fill its column:
+Four columns, left to right in the order the pipeline runs them, each with its own latency. The
+recording above is the live demo, unedited.
 
-Asking *"how much colour contrast does large text need"*:
+**Select a candidate and it tells you where every stage put it.** In the last frame, Success
+Criterion 1.4.3 Contrast (Minimum) — the correct answer — sits at:
 
-```
-Dense             BM25              Fused             Reranked
-cosine            idf sum   1.2ms   RRF, k=60 0.1ms   cross-encoder
+| BM25 | Dense | Fused | Reranked |
+| ---: | ---: | ---: | ---: |
+| #17 | **#1** | #3 | #4 |
 
-┌──────────────┐  1 Benefits        1 Benefits        ┌──────────────────┐
-│ no vector    │        18.258            0.016       │ no worker        │
-│ index        │  2 Benefits        2 Benefits        │ configured —     │
-└──────────────┘        15.000            0.016       │ showing the      │
-                  3 Statuses        3 Statuses        │ fused order      │
-                        14.228            0.016       └──────────────────┘
-                                                      1 Benefits   held #1
-                                                      2 Benefits   held #2
-```
-
-`3 Statuses` is a GOV.UK task-list page, and it is wrong — a lexical false positive that the dense
-half exists to push down. It is left in the example rather than swapped for a flattering one.
+That single row is the argument for hybrid retrieval. The lexical half buried the right criterion
+at rank 17; the dense half put it first. Neither is reliable alone, and the fusion recovers it.
 
 The scores are shown in their real units and **never put on a common scale**. Cosine sits in
 [0, 1]; BM25 is an unbounded sum of idf terms; RRF is a sum of reciprocal ranks clustered around
