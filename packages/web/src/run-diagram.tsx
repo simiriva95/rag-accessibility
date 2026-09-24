@@ -2,6 +2,7 @@ import { tokenize } from '@rag/core';
 import type { CSSProperties, ReactNode } from 'react';
 import type { AnswerState } from './use-answer.ts';
 import type { Run } from './use-retrieval.ts';
+import { useLang } from './i18n.tsx';
 import { useInView, type Series } from './viz.tsx';
 
 /**
@@ -39,6 +40,7 @@ const ms = (value: number | undefined) =>
 
 export function RunDiagram({ run, answer, total }: { run: Run; answer: AnswerState; total: number }) {
   const [ref, seen] = useInView<HTMLElement>();
+  const { t, num } = useLang();
   const stage = (name: 'dense' | 'lexical' | 'fused') => run.stages.find((s) => s.name === name);
   const reason = (name: string) => run.degraded.find((d) => d.stage === name)?.reason;
 
@@ -61,11 +63,11 @@ export function RunDiagram({ run, answer, total }: { run: Run; answer: AnswerSta
 
   const lexicalLane: Node[] = [
     {
-      title: 'Tokenize',
+      title: t('Tokenize', 'Tokenizza'),
       where: 'Browser',
       facts: [
-        ['tokens', tokens.length],
-        ['indexed', `${known}/${new Set(tokens).size}`],
+        ['token', tokens.length],
+        [t('indexed', 'indicizzati'), `${known}/${new Set(tokens).size}`],
       ],
     },
     {
@@ -74,48 +76,48 @@ export function RunDiagram({ run, answer, total }: { run: Run; answer: AnswerSta
       series: 'lexical',
       time: stage('lexical')?.ms,
       facts: [
-        ['scored', total.toLocaleString('en-GB')],
-        ['kept', lexical.length],
-        ['top score', lexical[0]?.score.toFixed(2) ?? 'none'],
+        [t('scored', 'valutati'), num(total)],
+        [t('kept', 'tenuti'), lexical.length],
+        [t('top score', 'punteggio max'), lexical[0]?.score.toFixed(2) ?? t('none', 'nessuno')],
       ],
     },
   ];
 
   const denseLane: Node[] = [
     {
-      title: 'Embed',
+      title: 'Embedding',
       where: 'Edge',
       time: run.timings.embed,
       missing: reason('embed'),
       facts: [
-        ['model', 'bge-small'],
-        ['dims', run.vector?.length ?? 0],
+        [t('model', 'modello'), 'bge-small'],
+        [t('dims', 'dimensioni'), run.vector?.length ?? 0],
       ],
     },
     {
-      title: 'Dense scan',
+      title: t('Dense scan', 'Scansione semantica'),
       where: 'Browser',
       series: 'dense',
       time: stage('dense')?.ms,
       missing: reason('dense'),
       facts: [
-        ['scored', total.toLocaleString('en-GB')],
-        ['kept', dense.length],
-        ['top cosine', dense[0]?.score.toFixed(3) ?? 'none'],
+        [t('scored', 'valutati'), num(total)],
+        [t('kept', 'tenuti'), dense.length],
+        [t('top cosine', 'coseno max'), dense[0]?.score.toFixed(3) ?? t('none', 'nessuno')],
       ],
     },
   ];
 
   const tail: Node[] = [
     {
-      title: 'Rank fusion',
+      title: t('Rank fusion', 'Fusione'),
       where: 'Browser',
       series: 'hybrid',
       time: stage('fused')?.ms,
       facts: [
-        ['in both lists', `${overlap} of ${Math.max(dense.length, lexical.length)}`],
-        ['distinct', union],
-        ['kept', fused.length],
+        [t('in both lists', 'in entrambe'), `${overlap} ${t('of', 'su')} ${Math.max(dense.length, lexical.length)}`],
+        [t('distinct', 'distinti'), union],
+        [t('kept', 'tenuti'), fused.length],
       ],
     },
     {
@@ -125,39 +127,39 @@ export function RunDiagram({ run, answer, total }: { run: Run; answer: AnswerSta
       time: run.timings.rerank,
       missing: reason('rerank'),
       facts: [
-        ['read', fused.length],
-        ['kept', run.final.length],
-        ['moved up', promoted],
-        ['from below #8', fromOutside],
+        [t('read', 'letti'), fused.length],
+        [t('kept', 'tenuti'), run.final.length],
+        [t('moved up', 'saliti'), promoted],
+        [t('from below #8', 'da sotto il #8'), fromOutside],
       ],
     },
     {
-      title: 'Generate',
+      title: t('Generate', 'Generazione'),
       where: 'Edge',
       time: result?.timings.generate,
       pending: answer.phase === 'generating',
       missing: answer.phase === 'unavailable' ? answer.reason : undefined,
       facts: generated
         ? [
-            ['model', result?.model?.replace(/^@cf\/[^/]+\//, '') ?? 'answering'],
-            ['sources in', run.final.length],
-            ['sentences', generated.sentences.length],
-            ['claims', generated.claims.length],
+            [t('model', 'modello'), result?.model?.replace(/^@cf\/[^/]+\//, '') ?? t('answering', 'in corso')],
+            [t('sources in', 'fonti lette'), run.final.length],
+            [t('sentences', 'frasi'), generated.sentences.length],
+            [t('claims', 'citazioni'), generated.claims.length],
           ]
-        : [['sources in', run.final.length]],
+        : [[t('sources in', 'fonti lette'), run.final.length]],
     },
     {
-      title: 'Verify',
-      where: 'Both',
+      title: t('Verify', 'Verifica'),
+      where: t('Both', 'Entrambi'),
       time: result?.timings.verify,
       pending: pendingAnswer,
-      missing: answer.phase === 'unavailable' ? 'nothing to verify' : undefined,
+      missing: answer.phase === 'unavailable' ? t('nothing to verify', 'niente da verificare') : undefined,
       facts: result
         ? [
-            ['claims', claims.length],
-            ['quote found', claims.filter((c) => c.quoteMatch).length],
-            ['verified', claims.filter((c) => c.status === 'verified').length],
-            ['unsupported', claims.filter((c) => c.status === 'unsupported').length],
+            [t('claims', 'citazioni'), claims.length],
+            [t('quote found', 'trovate'), claims.filter((c) => c.quoteMatch).length],
+            [t('verified', 'verificate'), claims.filter((c) => c.status === 'verified').length],
+            [t('unsupported', 'non supportate'), claims.filter((c) => c.status === 'unsupported').length],
           ]
         : [],
     },
@@ -169,23 +171,28 @@ export function RunDiagram({ run, answer, total }: { run: Run; answer: AnswerSta
   return (
     <figure ref={ref} className={`min-w-0 rounded-2xl border border-line bg-paper p-5 ${seen ? 'viz-in' : ''}`}>
       <figcaption>
-        <span className="block font-medium">What happened, structurally</span>
+        <span className="block font-medium">{t('What happened, structurally', 'Cosa è successo, nella struttura')}</span>
         <span className="mt-1 block max-w-[65ch] text-sm text-ink-2">
-          The query forks into a lexical and a semantic branch, which meet at fusion; from there one
-          list narrows to the sources the answer was written from. Every number is this question’s.
+          {t(
+            'The query forks into a lexical and a semantic branch, which meet at fusion; from there one list narrows to the sources the answer was written from. Every number is this question’s.',
+            'La domanda si divide in un ramo lessicale e uno semantico, che si riuniscono nella fusione; da lì un’unica lista si restringe fino alle fonti da cui è scritta la risposta. Ogni numero è di questa domanda.',
+          )}
         </span>
       </figcaption>
 
       <ol className="mx-auto mt-6 flex max-w-2xl flex-col items-stretch gap-2 xl:max-w-none xl:flex-row xl:items-center">
         <li className="contents">
-          <Card node={{ title: 'Question', where: 'Browser', facts: [['characters', run.query.length]] }} i={next()} />
+          <Card
+            node={{ title: t('Question', 'Domanda'), where: 'Browser', facts: [[t('characters', 'caratteri'), run.query.length]] }}
+            i={next()}
+          />
         </li>
         <Arrow i={next()} />
         <li className="min-w-0 xl:flex-[2]">
-          <span className="sr-only">Two branches run for the same question:</span>
+          <span className="sr-only">{t('Two branches run for the same question:', 'Due rami lavorano sulla stessa domanda:')}</span>
           <ol className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-1">
-            <Lane label="Lexical branch" nodes={lexicalLane} next={next} />
-            <Lane label="Semantic branch" nodes={denseLane} next={next} />
+            <Lane label={t('Lexical branch', 'Ramo lessicale')} nodes={lexicalLane} next={next} />
+            <Lane label={t('Semantic branch', 'Ramo semantico')} nodes={denseLane} next={next} />
           </ol>
         </li>
         {tail.map((node) => (
@@ -222,6 +229,7 @@ export function Lane({ label, nodes, next }: { label: string; nodes: Node[]; nex
 }
 
 export function Card({ node, i, compact = false }: { node: Node; i: number; compact?: boolean }) {
+  const { t } = useLang();
   const state = node.missing ? 'border-dashed border-partial' : 'border-line';
   return (
     <div
@@ -230,11 +238,11 @@ export function Card({ node, i, compact = false }: { node: Node; i: number; comp
     >
       <div className="flex items-baseline justify-between gap-2">
         <span className="text-sm font-medium">{node.title}</span>
-        <span className="shrink-0 font-mono text-[11px] text-muted">{node.pending ? 'running' : ms(node.time)}</span>
+        <span className="shrink-0 font-mono text-[11px] text-muted">{node.pending ? t('running', 'in corso') : ms(node.time)}</span>
       </div>
       <span className="text-[11px] text-muted">{node.where}</span>
       {node.missing ? (
-        <p className="mt-2 line-clamp-3 text-xs text-ink-2">Did not run: {node.missing}</p>
+        <p className="mt-2 line-clamp-3 text-xs text-ink-2">{t('Did not run:', 'Non eseguita:')} {node.missing}</p>
       ) : (
         <dl className={`mt-2 space-y-0.5 text-xs ${compact ? '' : ''}`}>
           {node.facts.map(([term, value]) => (

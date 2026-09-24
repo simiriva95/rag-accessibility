@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Chunk } from '@rag/core';
+import { useLang } from './i18n.tsx';
 
 /**
  * The source document, with the verified quote highlighted where it sits.
@@ -36,6 +37,7 @@ const prefersReducedMotion = () =>
 
 export function SourceDialog({ target, onClose }: { target?: SourceTarget; onClose: () => void }) {
   const dialogRef = useRef<HTMLDialogElement | null>(null);
+  const { t, num } = useLang();
   const markRef = useRef<HTMLElement | null>(null);
   const [document_, setDocument] = useState<{ docId: string; text: string }>();
   const [error, setError] = useState<string>();
@@ -95,7 +97,7 @@ export function SourceDialog({ target, onClose }: { target?: SourceTarget; onClo
         <>
           <div className="flex shrink-0 items-start gap-4 border-b border-line px-5 py-4">
             <div className="min-w-0">
-              <h2 id="source-title" className="font-semibold">
+              <h2 id="source-title" className="font-semibold" lang="en">
                 {target.chunk.docTitle}
               </h2>
               <p className="mt-1 truncate text-sm text-ink-2">
@@ -103,8 +105,10 @@ export function SourceDialog({ target, onClose }: { target?: SourceTarget; onClo
               </p>
               {span && (
                 <p className="mt-1 text-sm text-ink-2">
-                  Highlighted characters {span.start.toLocaleString('en-GB')}-
-                  {span.end.toLocaleString('en-GB')} of the normalized document.
+                  {t(
+                    `Highlighted characters ${num(span.start)}-${num(span.end)} of the normalized document.`,
+                    `Caratteri evidenziati ${num(span.start)}-${num(span.end)} del documento normalizzato.`,
+                  )}
                 </p>
               )}
             </div>
@@ -113,7 +117,7 @@ export function SourceDialog({ target, onClose }: { target?: SourceTarget; onClo
               onClick={onClose}
               className="ml-auto shrink-0 rounded-lg border border-line-strong px-3 py-1.5 text-sm"
             >
-              Close
+              {t('Close', 'Chiudi')}
             </button>
           </div>
 
@@ -121,18 +125,21 @@ export function SourceDialog({ target, onClose }: { target?: SourceTarget; onClo
             {error && <p role="alert">{error}</p>}
 
             {!error && text === undefined && (
-              <p className="text-ink-2">Loading the source document…</p>
+              <p className="text-ink-2">{t('Loading the source document…', 'Carico il documento sorgente…')}</p>
             )}
 
             {text !== undefined && (
               <>
                 <p className="mb-4 text-sm text-ink-2">
-                  This is the normalized text the offsets are measured against, shown unaltered.{' '}
+                  {t(
+                    'This is the normalized text the offsets are measured against, shown unaltered.',
+                    'Questo è il testo normalizzato su cui sono misurate le posizioni, mostrato senza modifiche.',
+                  )}{' '}
                   <a href={target.chunk.sourceUrl} className="underline underline-offset-2" rel="noreferrer">
-                    Original document
+                    {t('Original document', 'Documento originale')}
                   </a>
                 </p>
-                <p className="text-sm leading-relaxed whitespace-pre-wrap">
+                <p className="text-sm leading-relaxed whitespace-pre-wrap" lang="en">
                   {span ? (
                     <>
                       {text.slice(0, span.start)}

@@ -334,3 +334,11 @@ describe('conformance level', () => {
     expect(levelOf({ docTitle: 'WCAG 2.2', text: '(Level AA) ... (Level AAA)' })).toBeUndefined();
   });
 });
+
+describe('conformance level, in Italian', () => {
+  it('reads "Livello A" as naming Level A, and a bare "a" as nothing', () => {
+    expect(namesLevel('Al Livello A servono i sottotitoli.', {}, 'A')).toBe(true);
+    expect(namesLevel('Serve a garantire il contrasto.', {}, 'A')).toBe(false);
+    expect(namesLevel('Al Livello AAA il testo grande richiede 4.5:1.', {}, 'AAA')).toBe(true);
+  });
+});

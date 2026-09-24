@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { useLang } from './i18n.tsx';
 
 /**
  * The charts, hand-built: a few dozen lines of HTML and SVG each, against a
@@ -48,6 +49,13 @@ export const SERIES_LABEL: Record<Series, string> = {
   rerank: 'Hybrid + rerank',
 };
 
+const SERIES_LABEL_IT: Record<Series, string> = {
+  dense: 'Semantico',
+  lexical: 'BM25',
+  hybrid: 'Ibrido (RRF)',
+  rerank: 'Ibrido + rerank',
+};
+
 export type Tone = Series | 'ink' | 'muted';
 
 const fill: Record<Tone, string> = {
@@ -76,6 +84,7 @@ export function Figure({
   children: ReactNode;
 }) {
   const [ref, seen] = useInView<HTMLElement>();
+  const { t } = useLang();
 
   return (
     <figure ref={ref} className={`min-w-0 rounded-2xl border border-line bg-paper p-5 ${seen ? 'viz-in' : ''}`}>
@@ -88,7 +97,7 @@ export function Figure({
         {children}
       </div>
       <details className="mt-4 text-sm">
-        <summary className="cursor-pointer text-ink-2 hover:text-ink">Table view</summary>
+        <summary className="cursor-pointer text-ink-2 hover:text-ink">{t('Table view', 'Vista tabella')}</summary>
         <DataTable head={table.head} rows={table.rows} label={title} />
       </details>
     </figure>
@@ -96,12 +105,13 @@ export function Figure({
 }
 
 export function Legend({ series }: { series: Series[] }) {
+  const { t } = useLang();
   return (
-    <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-ink-2" aria-label="Legend">
+    <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-ink-2" aria-label={t('Legend', 'Legenda')}>
       {series.map((name) => (
         <li key={name} className="flex items-center gap-1.5">
           <span className={`inline-block size-2.5 rounded-sm ${fill[name]}`} />
-          {SERIES_LABEL[name]}
+          {t(SERIES_LABEL[name], SERIES_LABEL_IT[name])}
         </li>
       ))}
     </ul>
@@ -301,6 +311,7 @@ export function Slope({
   rows: { label: string; from: number; to: number }[];
   fusedCount: number;
 }) {
+  const { t } = useLang();
   const height = 280;
   const left = 56;
   const right = 280;
@@ -310,10 +321,10 @@ export function Slope({
     <div className="grid gap-4 sm:grid-cols-[minmax(0,320px)_1fr]">
       <svg viewBox={`0 0 ${right + 24} ${height}`} className="w-full max-w-[320px]" focusable="false">
         <text x={left} y={10} textAnchor="middle" className="fill-muted text-[10px]">
-          fused
+          {t('fused', 'fusi')}
         </text>
         <text x={right} y={10} textAnchor="middle" className="fill-muted text-[10px]">
-          final
+          {t('final', 'finali')}
         </text>
         <line x1={left} x2={left} y1={28} y2={height - 12} className="stroke-line" />
         <line x1={right} x2={right} y1={28} y2={height - 12} className="stroke-line" />
@@ -350,7 +361,11 @@ export function Slope({
             <span className="w-6 shrink-0 font-mono text-xs tabular-nums text-muted">#{row.to}</span>
             <span className="min-w-0 flex-1">{row.label}</span>
             <span className="shrink-0 font-mono text-xs tabular-nums text-ink-2">
-              {row.from === row.to ? 'held' : row.from > row.to ? `up ${row.from - row.to}` : `down ${row.to - row.from}`}
+              {row.from === row.to
+                ? t('held', 'fermo')
+                : row.from > row.to
+                  ? `${t('up', 'su')} ${row.from - row.to}`
+                  : `${t('down', 'giù')} ${row.to - row.from}`}
             </span>
           </li>
         ))}

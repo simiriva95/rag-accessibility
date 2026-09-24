@@ -25,6 +25,8 @@ export type Answered = {
   sources: Chunk[];
   /** Which model in the chain answered, when the worker reports it. */
   model?: string;
+  /** The language the sentences were written in, which the page may since have switched away from. */
+  language: 'en' | 'it';
   /** Wall-clock, as the browser saw it: generation includes the worker's retries. */
   timings: { generate: number; verify: number };
 };
@@ -36,7 +38,15 @@ export type AnswerState =
   | { phase: 'answered'; result: Answered }
   | { phase: 'unavailable'; reason: string };
 
-export function useAnswer(retrieval: Retrieval): AnswerState {
+/**
+ * `language` is read when a question arrives, not watched: switching language
+ * while reading an answer changes the page around it, and the next question
+ * is answered in the new language. Regenerating on the switch would spend a
+ * model call on an answer the reader already has.
+ */
+export function useAnswer(retrieval: Retrieval, language: 'en' | 'it' = 'en'): AnswerState {
+  const languageRef = useRef(language);
+  languageRef.current = language;
   const [state, setState] = useState<AnswerState>({ phase: 'idle' });
   const generation = useRef(0);
   const { run, meta, text } = retrieval;
@@ -68,9 +78,11 @@ export function useAnswer(retrieval: Retrieval): AnswerState {
 
     void (async () => {
       const started = performance.now();
+      const language = languageRef.current;
       const response = await generate(
         run.query,
         sources.map(({ id: chunkId, text: body }) => ({ id: chunkId, text: body })),
+        language,
       );
       if (id !== generation.current) return;
 
@@ -99,6 +111,7 @@ export function useAnswer(retrieval: Retrieval): AnswerState {
           dropped: payload.dropped,
           sources,
           ...(payload.model ? { model: payload.model } : {}),
+          language,
           timings: { generate: generated - started, verify: performance.now() - generated },
         },
       });

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 import type { Scored } from '@rag/core';
 import type { DegradedStage, Retrieval, Run } from './use-retrieval.ts';
 import type { ChunkMeta } from './retrieval.worker.ts';
+import { useLang } from './i18n.tsx';
 
 /**
  * The retrieval debugger.
@@ -36,26 +37,31 @@ const SHOWN = 10;
 export function RetrievalDebugger({ retrieval }: { retrieval: Retrieval }) {
   const { run, meta } = retrieval;
   const [selected, setSelected] = useState<string>();
+  const { t } = useLang();
 
   useEffect(() => setSelected(undefined), [run]);
 
   if (!run) {
     return (
       <p className="mt-6 text-ink-2">
-        Ask a question to see how the candidates are retrieved, fused and reranked.
+        {t(
+          'Ask a question to see how the candidates are retrieved, fused and reranked.',
+          'Fai una domanda per vedere come i candidati vengono trovati, fusi e riordinati.',
+        )}
       </p>
     );
   }
 
-  const columns = buildColumns(run);
+  const columns = buildColumns(run, t);
 
   return (
     <div className="mt-6" onKeyDown={(event) => event.key === 'Escape' && setSelected(undefined)}>
-      <h2 className="sr-only">Retrieval stages</h2>
+      <h2 className="sr-only">{t('Retrieval stages', 'Fasi del retrieval')}</h2>
       <p className="max-w-3xl text-sm text-ink-2">
-        Each column is a stage, in the order it runs. The scores are shown in their own units and
-        are never put on a common scale. That is why fusion reads the ordering rather than the
-        numbers.
+        {t(
+          'Each column is a stage, in the order it runs. The scores are shown in their own units and are never put on a common scale. That is why fusion reads the ordering rather than the numbers.',
+          'Ogni colonna è una fase, nell’ordine in cui viene eseguita. I punteggi sono mostrati nelle loro unità e mai portati su una scala comune: per questo la fusione legge l’ordine e non i numeri.',
+        )}
       </p>
 
       <Columns columns={columns} meta={meta} selected={selected} onSelect={setSelected} />
@@ -64,9 +70,12 @@ export function RetrievalDebugger({ retrieval }: { retrieval: Retrieval }) {
         <span className="font-medium text-ink">
           {Math.round(run.timings.total)} ms
         </span>{' '}
-        end to end
-        {run.timings.embed !== undefined && `, of which ${Math.round(run.timings.embed)} ms embedding`}
-        {run.timings.rerank !== undefined && ` and ${Math.round(run.timings.rerank)} ms reranking`}.
+        {t('end to end', 'in totale')}
+        {run.timings.embed !== undefined &&
+          t(`, of which ${Math.round(run.timings.embed)} ms embedding`, `, di cui ${Math.round(run.timings.embed)} ms di embedding`)}
+        {run.timings.rerank !== undefined &&
+          t(` and ${Math.round(run.timings.rerank)} ms reranking`, ` e ${Math.round(run.timings.rerank)} ms di reranking`)}
+        .
       </p>
 
       <Detail run={run} meta={meta} selected={selected} />
@@ -74,7 +83,7 @@ export function RetrievalDebugger({ retrieval }: { retrieval: Retrieval }) {
   );
 }
 
-function buildColumns(run: Run): Column[] {
+function buildColumns(run: Run, t: ReturnType<typeof useLang>['t']): Column[] {
   const stage = (name: 'dense' | 'lexical' | 'fused') => run.stages.find((s) => s.name === name);
   const reasonFor = (name: string) => run.degraded.find((d: DegradedStage) => d.stage === name)?.reason;
 
@@ -84,33 +93,33 @@ function buildColumns(run: Run): Column[] {
   return [
     {
       id: 'dense',
-      title: 'Dense',
-      unit: 'cosine',
+      title: t('Dense', 'Semantico'),
+      unit: t('cosine', 'coseno'),
       hits: dense?.hits ?? [],
       ...(dense ? { ms: dense.ms } : {}),
-      ...(dense ? {} : { missing: reasonFor('dense') ?? reasonFor('embed') ?? 'did not run' }),
+      ...(dense ? {} : { missing: reasonFor('dense') ?? reasonFor('embed') ?? t('did not run', 'non eseguita') }),
     },
     {
       id: 'lexical',
       title: 'BM25',
-      unit: 'idf sum',
+      unit: t('idf sum', 'somma idf'),
       hits: stage('lexical')?.hits ?? [],
       ...(stage('lexical') ? { ms: stage('lexical')!.ms } : {}),
     },
     {
       id: 'fused',
-      title: 'Fused',
+      title: t('Fused', 'Fusi'),
       unit: 'RRF, k=60',
       hits: fused?.hits ?? [],
       ...(fused ? { ms: fused.ms } : {}),
     },
     {
       id: 'final',
-      title: 'Reranked',
+      title: t('Reranked', 'Riordinati'),
       unit: 'cross-encoder',
       hits: run.final,
       ...(run.timings.rerank !== undefined ? { ms: run.timings.rerank } : {}),
-      ...(reasonFor('rerank') ? { missing: `${reasonFor('rerank')}, showing the fused order` } : {}),
+      ...(reasonFor('rerank') ? { missing: `${reasonFor('rerank')}, ${t('showing the fused order', 'mostro l’ordine fuso')}` } : {}),
     },
   ];
 }
@@ -178,6 +187,7 @@ function ColumnView({
   register: (key: string, element: HTMLElement | null) => void;
   fused: Scored[];
 }) {
+  const { t } = useLang();
   const fusedRank = new Map(fused.map((hit, index) => [hit.chunkId, index]));
   const headingId = `column-${column.id}`;
 
@@ -200,7 +210,7 @@ function ColumnView({
       )}
 
       {column.hits.length === 0 ? (
-        !column.missing && <p className="mt-2 text-xs text-muted">No candidates.</p>
+        !column.missing && <p className="mt-2 text-xs text-muted">{t('No candidates.', 'Nessun candidato.')}</p>
       ) : (
         <ol className="mt-2 space-y-1">
           {column.hits.slice(0, SHOWN).map((hit, index) => {
@@ -221,7 +231,7 @@ function ColumnView({
                 >
                   <span className="flex items-baseline gap-1.5">
                     <span className="tabular-nums text-muted">{index + 1}</span>
-                    <span className="min-w-0 flex-1 truncate font-medium">
+                    <span className="min-w-0 flex-1 truncate font-medium" lang="en">
                       {chunk?.headingPath.at(-1) ?? hit.chunkId}
                     </span>
                     <span className="tabular-nums text-muted">
@@ -248,12 +258,13 @@ function ColumnView({
  * the columns stack.
  */
 function RankDelta({ from, to }: { from: number; to: number }) {
+  const { t } = useLang();
   const moved = from - to;
-  if (moved === 0) return <span className="shrink-0">held #{from + 1}</span>;
+  if (moved === 0) return <span className="shrink-0">{t('held', 'fermo')} #{from + 1}</span>;
 
   return (
     <span className="shrink-0 font-medium">
-      {moved > 0 ? '▲' : '▼'} {Math.abs(moved)} from #{from + 1}
+      {moved > 0 ? '▲' : '▼'} {Math.abs(moved)} {t('from', 'da')} #{from + 1}
     </span>
   );
 }
@@ -367,10 +378,11 @@ function Detail({
   meta: Map<string, ChunkMeta>;
   selected: string | undefined;
 }) {
+  const { t, num } = useLang();
   if (!selected) {
     return (
       <p className="mt-4 text-sm text-muted">
-        Select a candidate to see where every stage ranked it.
+        {t('Select a candidate to see where every stage ranked it.', 'Seleziona un candidato per vedere dove l’ha messo ogni fase.')}
       </p>
     );
   }
@@ -383,28 +395,30 @@ function Detail({
 
   const places: { label: string; rank?: number }[] = [
     ...run.stages.map((stage) => ({
-      label: stage.name === 'lexical' ? 'BM25' : stage.name === 'dense' ? 'Dense' : 'Fused',
+      label: stage.name === 'lexical' ? 'BM25' : stage.name === 'dense' ? t('Dense', 'Semantico') : t('Fused', 'Fusi'),
       ...(rankIn(stage.hits) !== undefined ? { rank: rankIn(stage.hits)! } : {}),
     })),
-    { label: 'Reranked', ...(rankIn(run.final) !== undefined ? { rank: rankIn(run.final)! } : {}) },
+    { label: t('Reranked', 'Riordinati'), ...(rankIn(run.final) !== undefined ? { rank: rankIn(run.final)! } : {}) },
   ];
 
   return (
     <div className="mt-4 rounded-xl border border-line p-4">
-      <h3 className="font-medium">{chunk?.headingPath.join(' › ') ?? selected}</h3>
+      <h3 className="font-medium" lang="en">
+        {chunk?.headingPath.join(' › ') ?? selected}
+      </h3>
       <dl className="mt-3 flex flex-wrap gap-x-6 gap-y-1 text-sm">
         {places.map((place) => (
           <div key={place.label} className="flex gap-1.5">
             <dt className="text-muted">{place.label}</dt>
-            <dd className="tabular-nums">{place.rank === undefined ? 'not retrieved' : `#${place.rank}`}</dd>
+            <dd className="tabular-nums">{place.rank === undefined ? t('not retrieved', 'non trovato') : `#${place.rank}`}</dd>
           </div>
         ))}
       </dl>
       {chunk && (
         <p className="mt-3 text-sm text-ink-2">
           {chunk.docId}
-          {chunk.scRef && ` · SC ${chunk.scRef}`} · {chunk.tokenCount} tokens · characters{' '}
-          {chunk.charStart.toLocaleString('en-GB')}-{chunk.charEnd.toLocaleString('en-GB')}
+          {chunk.scRef && ` · SC ${chunk.scRef}`} · {chunk.tokenCount} token · {t('characters', 'caratteri')}{' '}
+          {num(chunk.charStart)}-{num(chunk.charEnd)}
         </p>
       )}
     </div>

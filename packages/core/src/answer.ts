@@ -132,7 +132,7 @@ const LEVEL_RANK: Record<string, number> = { A: 0, AA: 1, AAA: 2 };
 
 /** The lowest conformance level a sentence names, if it names one. */
 const levelRank = (sentence: string): number | undefined => {
-  const ranks = [...sentence.matchAll(/\bLevel\s+(A{1,3})\b|\b(AAA?)\b/g)].map((m) => LEVEL_RANK[m[1] ?? m[2]!]!);
+  const ranks = [...sentence.matchAll(/\b(?:Level|Livello)\s+(A{1,3})\b|\b(AAA?)\b/g)].map((m) => LEVEL_RANK[m[1] ?? m[2]!]!);
   return ranks.length > 0 ? Math.min(...ranks) : undefined;
 };
 

@@ -1,5 +1,6 @@
 import type { AnswerState } from './use-answer.ts';
 import type { Retrieval } from './use-retrieval.ts';
+import { useLang } from './i18n.tsx';
 import { DataTable, useInView } from './viz.tsx';
 
 /**
@@ -13,11 +14,15 @@ import { DataTable, useInView } from './viz.tsx';
  * cumulative; BM25, the dense scan and fusion share one worker round trip.
  */
 
-type Row = { label: string; where: 'Browser' | 'Edge' | 'Both'; ms?: number | undefined; state: 'idle' | 'running' | 'done' | 'skipped' };
+type Row = { label: string; where: string; ms?: number | undefined; state: 'idle' | 'running' | 'done' | 'skipped' };
 
 export function PipelineFigure({ retrieval, answer }: { retrieval: Retrieval; answer: AnswerState }) {
   const [ref, seen] = useInView<HTMLElement>();
+  const { t } = useLang();
   const { run, running } = retrieval;
+  const EDGE = 'Edge';
+  const BROWSER = 'Browser';
+  const BOTH = t('Both', 'Entrambi');
   const stage = (name: 'dense' | 'lexical' | 'fused') => run?.stages.find((s) => s.name === name)?.ms;
   const failed = (name: string) => run?.degraded.some((d) => d.stage === name) ?? false;
 
@@ -34,13 +39,13 @@ export function PipelineFigure({ retrieval, answer }: { retrieval: Retrieval; an
   };
 
   const rows: Row[] = [
-    { label: 'Embed the query', where: 'Edge', ms: run?.timings.embed, state: retrievalState(run?.timings.embed, failed('embed')) },
-    { label: 'BM25', where: 'Browser', ms: stage('lexical'), state: retrievalState(stage('lexical')) },
-    { label: 'Dense scan', where: 'Browser', ms: stage('dense'), state: retrievalState(stage('dense')) },
-    { label: 'Rank fusion', where: 'Browser', ms: stage('fused'), state: retrievalState(stage('fused')) },
-    { label: 'Rerank', where: 'Edge', ms: run?.timings.rerank, state: retrievalState(run?.timings.rerank, failed('rerank')) },
-    { label: 'Generate', where: 'Edge', ms: timings?.generate, state: answerState('generating') },
-    { label: 'Verify', where: 'Both', ms: timings?.verify, state: answerState('verifying') },
+    { label: t('Embed the query', 'Embedding della domanda'), where: EDGE, ms: run?.timings.embed, state: retrievalState(run?.timings.embed, failed('embed')) },
+    { label: 'BM25', where: BROWSER, ms: stage('lexical'), state: retrievalState(stage('lexical')) },
+    { label: t('Dense scan', 'Scansione semantica'), where: BROWSER, ms: stage('dense'), state: retrievalState(stage('dense')) },
+    { label: t('Rank fusion', 'Fusione dei ranking'), where: BROWSER, ms: stage('fused'), state: retrievalState(stage('fused')) },
+    { label: 'Rerank', where: EDGE, ms: run?.timings.rerank, state: retrievalState(run?.timings.rerank, failed('rerank')) },
+    { label: t('Generate', 'Generazione'), where: EDGE, ms: timings?.generate, state: answerState('generating') },
+    { label: t('Verify', 'Verifica'), where: BOTH, ms: timings?.verify, state: answerState('verifying') },
   ];
 
   const total = rows.reduce((sum, row) => sum + (row.state === 'done' ? (row.ms ?? 0) : 0), 0);
@@ -52,7 +57,7 @@ export function PipelineFigure({ retrieval, answer }: { retrieval: Retrieval; an
       className={`self-start rounded-2xl border border-line bg-raised p-5 ${seen ? 'viz-in' : ''}`}
     >
       <figcaption className="flex items-baseline justify-between gap-3">
-        <span className="font-medium">{run ? 'This question, stage by stage' : 'Seven stages per question'}</span>
+        <span className="font-medium">{run ? t('This question, stage by stage', 'Questa domanda, fase per fase') : t('Seven stages per question', 'Sette fasi per ogni domanda')}</span>
         {total > 0 && <span className="font-mono text-sm tabular-nums text-ink-2">{fmt(total)}</span>}
       </figcaption>
 
@@ -64,7 +69,7 @@ export function PipelineFigure({ retrieval, answer }: { retrieval: Retrieval; an
           const width = total > 0 ? ((row.ms ?? 0) / total) * 100 : 0;
 
           return (
-            <li key={row.label} className="grid grid-cols-[7.5rem_1fr_4rem] items-center gap-3 text-sm">
+            <li key={row.label} className="grid grid-cols-[9.5rem_1fr_4rem] items-center gap-3 text-sm">
               <span className="truncate">
                 {row.label}
                 <span className="block text-xs text-muted">{row.where}</span>
@@ -87,7 +92,7 @@ export function PipelineFigure({ retrieval, answer }: { retrieval: Retrieval; an
                 )}
               </span>
               <span className="text-right font-mono text-xs tabular-nums text-ink-2">
-                {row.state === 'done' ? fmt(row.ms) : row.state === 'running' ? 'running' : row.state === 'skipped' ? 'skipped' : ''}
+                {row.state === 'done' ? fmt(row.ms) : row.state === 'running' ? t('running', 'in corso') : row.state === 'skipped' ? t('skipped', 'saltata') : ''}
               </span>
             </li>
           );
@@ -95,10 +100,10 @@ export function PipelineFigure({ retrieval, answer }: { retrieval: Retrieval; an
       </ol>
 
       <details className="mt-5 text-sm">
-        <summary className="cursor-pointer text-ink-2 hover:text-ink">Table view</summary>
+        <summary className="cursor-pointer text-ink-2 hover:text-ink">{t('Table view', 'Vista tabella')}</summary>
         <DataTable
-          label="Stage timings"
-          head={['Stage', 'Runs in', 'Time']}
+          label={t('Stage timings', 'Tempi delle fasi')}
+          head={[t('Stage', 'Fase'), t('Runs in', 'Dove'), t('Time', 'Tempo')]}
           rows={rows.map((row) => [row.label, row.where, row.state === 'done' ? fmt(row.ms) : row.state])}
         />
       </details>

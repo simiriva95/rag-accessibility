@@ -418,10 +418,27 @@ export type AnswerResult = (ParsedAnswer & { model: string }) | { degraded: { re
  * is still an app. So a failure here returns a reason, never a fabricated
  * answer and never an empty one dressed up as a refusal.
  */
-export async function answer(question: string, sources: Chunkish[], env: Env): Promise<AnswerResult> {
+/**
+ * The language the answer's sentences are written in. The quotes never
+ * follow it: they are checked character for character against the English
+ * corpus, so a translated quote would be reported as a fabrication.
+ */
+export type AnswerLanguage = 'en' | 'it';
+
+const LANGUAGE_RULE: Record<AnswerLanguage, string> = {
+  en: '',
+  it: `\n- Write "sentences" in Italian, including a refusal. Keep every "quote" in the original English, copied character for character from the source: never translate a quote. Name levels as "Livello AA", "Livello AAA".`,
+};
+
+export async function answer(
+  question: string,
+  sources: Chunkish[],
+  env: Env,
+  language: AnswerLanguage = 'en',
+): Promise<AnswerResult> {
   try {
     const attempt = await generateWith(env, {
-      system: SYSTEM_PROMPT,
+      system: SYSTEM_PROMPT + LANGUAGE_RULE[language],
       user: `${sourceBlock(sources)}\n\nQuestion: ${question}`,
       schema: ANSWER_SCHEMA,
     });
@@ -441,6 +458,8 @@ For each numbered pair, return one verdict:
 - supported: the evidence states the claim, or states something the claim follows from directly.
 - partially_supported: the evidence is about the same thing and does not contradict the claim, but does not establish it. Use this when the claim adds a detail, a number or a condition the evidence does not give, or when it drops a condition the evidence attaches — for example a conformance level (AA, AAA) or a scope such as large text.
 - not_supported: the evidence does not establish the claim, or contradicts it.
+
+The claim may be written in another language than the evidence, such as Italian; judge what it means, not the language it is in.
 
 Conformance levels are part of a WCAG requirement. If the evidence states a requirement at a level (A, AA or AAA) and the claim states that requirement without naming the level, the verdict is partially_supported, never supported: the same number means something different at another level.
 
@@ -550,7 +569,8 @@ export async function handle(request: Request, env: Env): Promise<Response> {
       default: {
         const question = text(input['question'], 'question', LIMITS.query);
         const sources = chunks(input['sources'], 'sources', LIMITS.sources);
-        return json(await answer(question, sources, env));
+        const language: AnswerLanguage = input['language'] === 'it' ? 'it' : 'en';
+        return json(await answer(question, sources, env, language));
       }
     }
   } catch (error) {

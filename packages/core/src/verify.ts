@@ -297,8 +297,8 @@ export function levelOf(chunk: Pick<Chunk, 'docTitle' | 'text'>): 'A' | 'AA' | '
 
 /** Whether the sentence says which level, or which criterion, it is stating. */
 export function namesLevel(sentence: string, chunk: Pick<Chunk, 'scRef'>, level: string): boolean {
-  // "AA" and "AAA" stand alone; a bare "A" is the article, so it needs "Level".
-  const pattern = level === 'A' ? /\bLevel\s+A\b/ : new RegExp(`\\b${level}\\b`);
+  // "AA" and "AAA" stand alone; a bare "A" is an article (or, in Italian, a preposition), so it needs "Level".
+  const pattern = level === 'A' ? /\b(?:Level|Livello)\s+A\b/ : new RegExp(`\\b${level}\\b`);
   return pattern.test(sentence) || (chunk.scRef !== undefined && sentence.includes(chunk.scRef));
 }
 

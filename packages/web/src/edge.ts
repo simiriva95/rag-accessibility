@@ -57,7 +57,8 @@ export type Generated =
 export const generate = (
   question: string,
   sources: { id: string; text: string }[],
-): Promise<Edge<Generated>> => call('/answer', { question, sources });
+  language: 'en' | 'it' = 'en',
+): Promise<Edge<Generated>> => call('/answer', { question, sources, language });
 
 /** The entailment judge, pointed at the worker. Returns nulls when it cannot run. */
 export const judge: EntailmentJudge = ENDPOINT

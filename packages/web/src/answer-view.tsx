@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { statusOf, type Chunk, type SentenceStatus, type VerifiedClaim } from '@rag/core';
+import { useLang } from './i18n.tsx';
 import { RunDiagram } from './run-diagram.tsx';
 import { SourceDialog, type SourceTarget } from './source-dialog.tsx';
 import type { AnswerState, Answered } from './use-answer.ts';
@@ -16,37 +17,52 @@ import type { Retrieval } from './use-retrieval.ts';
  * demonstration that the model never fails, which is not what is being claimed.
  */
 
-const PRESENTATION: Record<SentenceStatus, { mark: string; label: string; className: string }> = {
+const PRESENTATION: Record<SentenceStatus, { mark: string; label: string; it: string; name: string; className: string }> = {
   verified: {
     mark: '✓',
     label: 'verified: the quote is in the cited source',
+    it: 'verificata: la citazione è nella fonte citata',
+    name: 'verificata',
     className: 'decoration-solid decoration-2 text-verified',
   },
   partial: {
     mark: '≈',
     label: 'partial: the quote is real, the support is weak',
+    it: 'parziale: la citazione è reale, il supporto è debole',
+    name: 'parziale',
     className: 'decoration-dashed decoration-2 text-partial',
   },
   unsupported: {
     mark: '✕',
     label: 'unsupported: the quote is not in any cited source',
+    it: 'non supportata: la citazione non è in nessuna fonte citata',
+    name: 'non supportata',
     className: 'decoration-wavy decoration-2 text-unsupported',
   },
   unverified: {
     mark: '?',
     label: 'unverified: the quote is real, the support could not be checked',
+    it: 'non verificata: la citazione è reale, il supporto non si è potuto controllare',
+    name: 'non verificata',
     className: 'decoration-dotted decoration-2 text-unverified',
   },
-  uncited: { mark: '·', label: 'uncited: this sentence claims nothing', className: 'decoration-dotted' },
+  uncited: {
+    mark: '·',
+    label: 'uncited: this sentence claims nothing',
+    it: 'senza citazione: questa frase non afferma nulla',
+    name: 'senza citazione',
+    className: 'decoration-dotted',
+  },
 };
 
 export function AnswerView({ retrieval, state }: { retrieval: Retrieval; state: AnswerState }) {
   const [target, setTarget] = useState<SourceTarget>();
+  const { t } = useLang();
 
   if (!retrieval.run) {
     return (
       <p className="mt-6 text-ink-2">
-        Ask a question to see an answer with every citation checked.
+        {t('Ask a question to see an answer with every citation checked.', 'Fai una domanda per vedere una risposta con ogni citazione controllata.')}
       </p>
     );
   }
@@ -55,16 +71,18 @@ export function AnswerView({ retrieval, state }: { retrieval: Retrieval; state: 
 
   return (
     <div className="mt-6">
-      {state.phase === 'generating' && <Working>Writing an answer from the retrieved sources…</Working>}
-      {state.phase === 'verifying' && <Working>Checking each quote against the text it cites…</Working>}
+      {state.phase === 'generating' && <Working>{t('Writing an answer from the retrieved sources…', 'Scrivo una risposta dalle fonti trovate…')}</Working>}
+      {state.phase === 'verifying' && <Working>{t('Checking each quote against the text it cites…', 'Controllo ogni citazione contro il testo che cita…')}</Working>}
 
       {state.phase === 'unavailable' && (
         <div className="rounded-xl border border-partial px-3 py-2 text-sm">
-          <h2 className="font-medium">No written answer</h2>
+          <h2 className="font-medium">{t('No written answer', 'Nessuna risposta scritta')}</h2>
           <p className="mt-1 text-ink-2">{state.reason}</p>
           <p className="mt-2 text-ink-2">
-            The retrieved sources are below. Retrieval is most of the value here, so the app keeps
-            working without generation rather than showing nothing.
+            {t(
+              'The retrieved sources are below. Retrieval is most of the value here, so the app keeps working without generation rather than showing nothing.',
+              'Le fonti trovate sono qui sotto. Il retrieval è la parte più utile, quindi l’app continua a funzionare anche senza generazione invece di non mostrare nulla.',
+            )}
           </p>
         </div>
       )}
@@ -91,7 +109,7 @@ export function AnswerView({ retrieval, state }: { retrieval: Retrieval; state: 
   );
 }
 
-const Working = ({ children }: { children: string }) => (
+const Working = ({ children }: { children: React.ReactNode }) => (
   <p className="text-ink-2">{children}</p>
 );
 
@@ -108,17 +126,22 @@ function retrievedChunks(retrieval: Retrieval): Chunk[] {
 function Answer({ result, onInspect }: { result: Answered; onInspect: (target: SourceTarget) => void }) {
   const { answer, claims, dropped, sources } = result;
   const byId = new Map(sources.map((chunk) => [chunk.id, chunk]));
+  const { t } = useLang();
 
   if (!answer.answerable) {
     return (
       <section aria-labelledby="answer-heading">
         <h2 id="answer-heading" className="text-lg font-semibold">
-          No answer in these sources
+          {t('No answer in these sources', 'Nessuna risposta in queste fonti')}
         </h2>
-        <p className="mt-2 max-w-2xl">{answer.sentences.join(' ')}</p>
+        <p className="mt-2 max-w-2xl" lang={result.language}>
+          {answer.sentences.join(' ')}
+        </p>
         <p className="mt-2 max-w-2xl text-sm text-ink-2">
-          Declining is a correct answer. The corpus is WCAG 2.2 and the GOV.UK Design System, and
-          nothing outside it was consulted.
+          {t(
+            'Declining is a correct answer. The corpus is WCAG 2.2 and the GOV.UK Design System, and nothing outside it was consulted.',
+            'Rifiutarsi è una risposta corretta. Il corpus è WCAG 2.2 e il GOV.UK Design System, e nulla al di fuori è stato consultato.',
+          )}
         </p>
       </section>
     );
@@ -127,10 +150,10 @@ function Answer({ result, onInspect }: { result: Answered; onInspect: (target: S
   return (
     <section aria-labelledby="answer-heading">
       <h2 id="answer-heading" className="text-lg font-semibold">
-        Answer
+        {t('Answer', 'Risposta')}
       </h2>
 
-      <p className="mt-3 max-w-3xl text-lg leading-relaxed">
+      <p className="mt-3 max-w-3xl text-lg leading-relaxed" lang={result.language}>
         {answer.sentences.map((sentence, index) => (
           <Sentence
             key={`${index}-${sentence}`}
@@ -147,7 +170,10 @@ function Answer({ result, onInspect }: { result: Answered; onInspect: (target: S
       {dropped.length > 0 && (
         <details className="mt-4 text-sm">
           <summary className="cursor-pointer">
-            {dropped.length} malformed {dropped.length === 1 ? 'claim was' : 'claims were'} discarded
+            {t(
+              `${dropped.length} malformed ${dropped.length === 1 ? 'claim was' : 'claims were'} discarded`,
+              `${dropped.length} ${dropped.length === 1 ? 'citazione malformata scartata' : 'citazioni malformate scartate'}`,
+            )}
           </summary>
           <ul className="mt-2 list-disc space-y-0.5 pl-5 text-ink-2">
             {dropped.map((reason) => (
@@ -172,7 +198,9 @@ function Sentence({
   onInspect: (target: SourceTarget) => void;
 }) {
   const status = statusOf(sentence, claims);
-  const { mark, label, className } = PRESENTATION[status];
+  const { t } = useLang();
+  const { mark, className } = PRESENTATION[status];
+  const label = t(PRESENTATION[status].label, PRESENTATION[status].it);
 
   // The claim that resolved to a span is the one with somewhere to go.
   const located = claims.find((claim) => claim.span !== undefined);
@@ -200,13 +228,18 @@ function Sentence({
         <span className="text-ink">{sentence}</span>
         <span className="sr-only">
           , {label}
-          {omitted ? `. The source states this at Level ${omitted}, and the sentence does not say so` : ''}
-          {openable ? '. Select to open the source.' : ''}
+          {omitted
+            ? t(
+                `. The source states this at Level ${omitted}, and the sentence does not say so`,
+                `. La fonte lo indica al Livello ${omitted}, e la frase non lo dice`,
+              )
+            : ''}
+          {openable ? t('. Select to open the source.', '. Seleziona per aprire la fonte.') : ''}
         </span>
       </button>
       {omitted && (
         <span aria-hidden="true" className="ml-1 rounded-md border border-partial px-1.5 py-0.5 align-middle font-mono text-xs text-partial">
-          Level {omitted} not stated
+          {t(`Level ${omitted} not stated`, `Livello ${omitted} non indicato`)}
         </span>
       )}{' '}
     </>
@@ -221,6 +254,7 @@ function Legend({ claims, sentences }: { claims: VerifiedClaim[]; sentences: str
   }
 
   const present = [...counts].filter(([, n]) => n > 0);
+  const { t } = useLang();
 
   return (
     <dl className="mt-4 flex flex-wrap gap-x-6 gap-y-1 text-sm">
@@ -230,10 +264,10 @@ function Legend({ claims, sentences }: { claims: VerifiedClaim[]; sentences: str
             <span aria-hidden="true" className="mr-1 font-semibold">
               {PRESENTATION[status].mark}
             </span>
-            {status}
+            {t(status, PRESENTATION[status].name)}
           </dt>
           <dd className="tabular-nums text-ink-2">
-            {count} {count === 1 ? 'sentence' : 'sentences'}
+            {count} {count === 1 ? t('sentence', 'frase') : t('sentences', 'frasi')}
           </dd>
         </div>
       ))}
@@ -248,23 +282,27 @@ function Evidence({
   chunks: Chunk[];
   onInspect: (target: SourceTarget) => void;
 }) {
+  const { t } = useLang();
   if (chunks.length === 0) return null;
 
   return (
     <section aria-labelledby="evidence-heading" className="mt-8">
       <h2 id="evidence-heading" className="text-lg font-semibold">
-        Sources
+        {t('Sources', 'Fonti')}
       </h2>
       <ol className="mt-3 space-y-3">
         {chunks.map((chunk, index) => (
           <li key={chunk.id} className="rounded-xl border border-line p-4">
-            <p className="text-sm text-muted">
+            {/* The corpus is English whatever the interface language: 3.1.2 Language of Parts. */}
+            <p className="text-sm text-muted" lang="en">
               <span className="tabular-nums">{index + 1}.</span> {chunk.docTitle}
               {chunk.scRef && <> · SC {chunk.scRef}</>}
             </p>
-            <h3 className="mt-1 font-medium">{chunk.headingPath.at(-1) ?? chunk.docTitle}</h3>
+            <h3 className="mt-1 font-medium" lang="en">
+              {chunk.headingPath.at(-1) ?? chunk.docTitle}
+            </h3>
             {chunk.text && (
-              <p className="mt-2 line-clamp-3 text-sm text-ink-2">
+              <p className="mt-2 line-clamp-3 text-sm text-ink-2" lang="en">
                 {chunk.text
                   .split('\n\n')
                   .filter((block) => !block.startsWith('#'))
@@ -282,7 +320,7 @@ function Evidence({
                 }
                 className="py-1 underline underline-offset-2"
               >
-                Show this passage in the source
+                {t('Show this passage in the source', 'Mostra questo passaggio nella fonte')}
               </button>
               <a href={chunk.sourceUrl} className="py-1 underline underline-offset-2" rel="noreferrer">
                 {chunk.docId}
